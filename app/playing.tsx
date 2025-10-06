@@ -13,7 +13,7 @@ import {
     SpotifyArtistSimple,
 } from "@/contexts/AuthContext";
 import { MaterialIcons } from "@expo/vector-icons";
-import { useFocusEffect, router } from "expo-router";
+import { useFocusEffect, router, useLocalSearchParams } from "expo-router";
 import { HapticPressable } from "@/components/HapticPressable";
 import ContentContainer from "@/components/ContentContainer";
 import { useInvertColors } from "@/contexts/InvertColorsContext";
@@ -28,6 +28,61 @@ const formatTime = (ms: number | null | undefined): string => {
 };
 
 export default function PlayingScreen() {
+    const searchParams = useLocalSearchParams<{
+        trackId?: string | string[];
+        trackName?: string | string[];
+        trackArtists?: string | string[];
+        albumImageUrl?: string | string[];
+        albumId?: string | string[];
+        albumName?: string | string[];
+        artistId?: string | string[];
+        artistName?: string | string[];
+    }>();
+
+    const parseParam = (value?: string | string[]) =>
+        Array.isArray(value) ? value[0] : value;
+
+    const {
+        trackId: trackIdParam,
+        trackName: trackNameParam,
+        trackArtists: trackArtistsParam,
+        albumImageUrl: albumImageUrlParam,
+        albumId: albumIdParam,
+        albumName: albumNameParam,
+        artistId: artistIdParam,
+        artistName: artistNameParam,
+    } = searchParams;
+
+    const optimisticTrackFromParams = React.useMemo(() => {
+        const trackName = parseParam(trackNameParam);
+        const trackArtists = parseParam(trackArtistsParam);
+        const albumImageUrl = parseParam(albumImageUrlParam);
+
+        if (!trackName && !trackArtists && !albumImageUrl) {
+            return null;
+        }
+
+        return {
+            trackId: parseParam(trackIdParam) ?? undefined,
+            trackName: trackName ?? undefined,
+            trackArtists: trackArtists ?? undefined,
+            albumImageUrl: albumImageUrl ?? undefined,
+            albumId: parseParam(albumIdParam) ?? undefined,
+            albumName: parseParam(albumNameParam) ?? undefined,
+            artistId: parseParam(artistIdParam) ?? undefined,
+            artistName: parseParam(artistNameParam) ?? undefined,
+        };
+    }, [
+        trackIdParam,
+        trackNameParam,
+        trackArtistsParam,
+        albumImageUrlParam,
+        albumIdParam,
+        albumNameParam,
+        artistIdParam,
+        artistNameParam,
+    ]);
+
     const {
         startPlayback,
         pausePlayback,
@@ -47,6 +102,19 @@ export default function PlayingScreen() {
     const [playbackState, setPlaybackState] =
         useState<SpotifyCurrentlyPlaying | null>(null);
     const [isCurrentTrackSaved, setIsCurrentTrackSaved] = useState(false);
+    const [optimisticTrack, setOptimisticTrack] = useState<
+        | {
+              trackId?: string;
+              trackName?: string;
+              trackArtists?: string;
+              albumImageUrl?: string;
+              albumId?: string;
+              albumName?: string;
+              artistId?: string;
+              artistName?: string;
+          }
+        | null
+    >(optimisticTrackFromParams);
 
     const progress = useRef(new Animated.Value(0)).current;
     const progressBarWidthRef = useRef<number | null>(null);
@@ -59,6 +127,15 @@ export default function PlayingScreen() {
     useEffect(() => {
         appStateRef.current = appState;
     }, [appState]);
+
+    useEffect(() => {
+        setOptimisticTrack(optimisticTrackFromParams);
+        if (optimisticTrackFromParams) {
+            setPlaybackState(null);
+            setIsCurrentTrackSaved(false);
+            progress.setValue(0);
+        }
+    }, [optimisticTrackFromParams, progress]);
 
     const checkIfTrackIsSaved = React.useCallback(
         async (trackId: string) => {
@@ -83,6 +160,10 @@ export default function PlayingScreen() {
         }
 
         setPlaybackState(state as SpotifyCurrentlyPlaying);
+
+        if (state && state.item) {
+            setOptimisticTrack(null);
+        }
 
         if (state && state.item && state.item.id) {
             if (state.progress_ms !== null) {
@@ -273,6 +354,82 @@ export default function PlayingScreen() {
 
 
     if (!playbackState || !playbackState.item) {
+        if (optimisticTrack) {
+            return (
+                <ContentContainer headerTitle=" " style={{ paddingHorizontal: 20 }}>
+                    <View style={styles.content}>
+                        {optimisticTrack.albumImageUrl ? (
+                            <Image
+                                source={{ uri: optimisticTrack.albumImageUrl }}
+                                style={styles.albumArt}
+                            />
+                        ) : (
+                            <View style={styles.placeholderImageContainer}>
+                                <MaterialIcons
+                                    name="music-note"
+                                    size={100}
+                                    color={invertColors ? "black" : "white"}
+                                />
+                            </View>
+                        )}
+                        <View style={styles.trackInfoContainer}>
+                            <HapticPressable
+                                onPress={async () => {
+                                    if (
+                                        isOnline &&
+                                        optimisticTrack.albumId &&
+                                        optimisticTrack.albumName
+                                    ) {
+                                        router.push({
+                                            pathname: "/album/[id]",
+                                            params: {
+                                                id: optimisticTrack.albumId,
+                                                albumName: optimisticTrack.albumName,
+                                            },
+                                        });
+                                    }
+                                }}
+                                disabled={
+                                    !isOnline ||
+                                    !optimisticTrack.albumId ||
+                                    !optimisticTrack.albumName
+                                }
+                            >
+                                <StyledText style={styles.trackName} numberOfLines={1}>
+                                    {optimisticTrack.trackName ?? "Loading track"}
+                                </StyledText>
+                            </HapticPressable>
+                            <HapticPressable
+                                onPress={async () => {
+                                    if (
+                                        isOnline &&
+                                        optimisticTrack.artistId &&
+                                        optimisticTrack.artistName
+                                    ) {
+                                        router.push({
+                                            pathname: "/artist/[id]",
+                                            params: {
+                                                id: optimisticTrack.artistId,
+                                                artistName: optimisticTrack.artistName,
+                                            },
+                                        });
+                                    }
+                                }}
+                                disabled={
+                                    !isOnline ||
+                                    !optimisticTrack.artistId ||
+                                    !optimisticTrack.artistName
+                                }
+                            >
+                                <StyledText style={styles.artistName} numberOfLines={1}>
+                                    {optimisticTrack.trackArtists ?? "Starting playback"}
+                                </StyledText>
+                            </HapticPressable>
+                        </View>
+                    </View>
+                </ContentContainer>
+            );
+        }
         return (
             <ContentContainer headerTitle=" ">
                 <View style={styles.content}>

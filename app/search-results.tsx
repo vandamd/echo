@@ -16,6 +16,7 @@ import ContentContainer from "@/components/ContentContainer";
 import CustomScrollView from "@/components/CustomScrollView";
 import { logError } from "@/utils/logger";
 import { useNetworkState } from "@/hooks/useNetworkState";
+import { buildPlayingScreenParams } from "@/utils/playingScreen";
 
 type SearchItem =
     | { type: "track"; data: SpotifyTrack }
@@ -174,12 +175,13 @@ export default function SearchResultsScreen() {
                 style={styles.itemContainer}
                 onPress={async () => {
                     if (item.type === "track") {
+                        const playingParams = buildPlayingScreenParams(item.data);
                         try {
                             await playTrackWithContext(itemUri);
-                            router.push("/playing");
+                            router.push({ pathname: "/playing", params: playingParams });
                         } catch (error) {
                             logError("Error playing track:", error);
-                            router.push("/playing");
+                            router.push({ pathname: "/playing", params: playingParams });
                         }
                     } else if (item.type === "album") {
                         router.push({

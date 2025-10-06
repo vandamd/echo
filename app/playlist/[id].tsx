@@ -18,6 +18,7 @@ import ContentContainer from "@/components/ContentContainer";
 import CustomScrollView from "@/components/CustomScrollView";
 import { log, logError } from "@/utils/logger";
 import { getCachedPlaylistDetail } from "@/utils/cache";
+import { buildPlayingScreenParams } from "@/utils/playingScreen";
 
 // Interface for the structure of a track item within a playlist from Spotify API
 interface PlaylistTrack {
@@ -209,6 +210,7 @@ export default function PlaylistDetailScreen() {
                 key={`${track.id || "unknown"}-${index}`}
                 style={styles.trackItemContainer}
                 onPress={async () => {
+                    const playingParams = buildPlayingScreenParams(track);
                     try {
                         await skipToIndex(
                             {
@@ -216,10 +218,10 @@ export default function PlaylistDetailScreen() {
                                 uri: `spotify:playlist:${id}`,
                                 currentIndex: index,
                             });
-                        router.push("/playing");
+                        router.push({ pathname: "/playing", params: playingParams });
                     } catch (error) {
                         logError("Error playing track:", error);
-                        router.push("/playing");
+                        router.push({ pathname: "/playing", params: playingParams });
                     }
                 }}
             >

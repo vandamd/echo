@@ -17,6 +17,7 @@ import ContentContainer from "@/components/ContentContainer";
 import CustomScrollView from "@/components/CustomScrollView";
 import { log, logError } from "@/utils/logger";
 import { getCachedAlbumDetail } from "@/utils/cache";
+import { buildPlayingScreenParams } from "@/utils/playingScreen";
 
 export default function AlbumDetailScreen() {
     const { id, albumString, albumName } = useLocalSearchParams<{
@@ -224,6 +225,10 @@ export default function AlbumDetailScreen() {
             key={track.id || index.toString()}
             style={styles.trackItemContainer}
             onPress={async () => {
+                const playingParams = buildPlayingScreenParams({
+                    ...track,
+                    album: track.album ?? album,
+                });
                 try {
                     await skipToIndex(
                         {
@@ -231,11 +236,11 @@ export default function AlbumDetailScreen() {
                             uri: `spotify:album:${id}`,
                             currentIndex: index,
                         });
-                    router.push("/playing");
+                    router.push({ pathname: "/playing", params: playingParams });
                 } catch (error) {
                     logError("Error playing track:", error);
                     // Still navigate to playing screen even if playback fails
-                    router.push("/playing");
+                    router.push({ pathname: "/playing", params: playingParams });
                 }
             }}
         >

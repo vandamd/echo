@@ -19,6 +19,7 @@ import ContentContainer from "@/components/ContentContainer";
 import { useTabPreferences } from "@/contexts/TabPreferencesContext";
 import CustomScrollView from "@/components/CustomScrollView";
 import { useNetworkState } from "@/hooks/useNetworkState";
+import { buildPlayingScreenParams } from "@/utils/playingScreen";
 
 export default function LikedSongsScreen() {
     const {
@@ -94,6 +95,7 @@ export default function LikedSongsScreen() {
                     }
 
                     const collectionUri = "spotify:collection:tracks";
+                    const playingParams = buildPlayingScreenParams(item.track);
 
                     try {
                         let wasShuffling = false;
@@ -115,10 +117,10 @@ export default function LikedSongsScreen() {
                         if (wasShuffling) {
                             await toggleShuffle(true);
                         }
-                        router.push("/playing");
+                        router.push({ pathname: "/playing", params: playingParams });
                     } catch (error) {
                         logError("Error playing track:", error);
-                        router.push("/playing");
+                        router.push({ pathname: "/playing", params: playingParams });
                     }
                 }}
                 disabled={isDisabled}

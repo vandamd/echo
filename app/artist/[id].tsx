@@ -16,6 +16,7 @@ import { HapticPressable } from "@/components/HapticPressable";
 import ContentContainer from "@/components/ContentContainer";
 import CustomScrollView from "@/components/CustomScrollView";
 import { log, logError } from "@/utils/logger";
+import { buildPlayingScreenParams } from "@/utils/playingScreen";
 
 export default function ArtistDetailScreen() {
     const { id, artistString, artistName } = useLocalSearchParams<{
@@ -284,14 +285,15 @@ export default function ArtistDetailScreen() {
             <HapticPressable
                 style={styles.trackItemContainer}
                 onPress={async () => {
+                    const playingParams = buildPlayingScreenParams(track);
                     try {
                         const trackUris = topTracks.map((t) => t.uri);
                         const urisToPlay = trackUris.slice(item.index);
                         await playTracksWithWebApi(urisToPlay);
-                        router.push("/playing");
+                        router.push({ pathname: "/playing", params: playingParams });
                     } catch (error) {
                         logError("Error playing track:", error);
-                        router.push("/playing");
+                        router.push({ pathname: "/playing", params: playingParams });
                     }
                 }}
             >
