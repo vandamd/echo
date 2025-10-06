@@ -60,21 +60,28 @@ export default function PlayingScreen() {
         appStateRef.current = appState;
     }, [appState]);
 
-    const checkIfTrackIsSaved = async (trackId: string) => {
-        if (!trackId) return;
+    const checkIfTrackIsSaved = React.useCallback(
+        async (trackId: string) => {
+            if (!trackId) return;
 
-        const result = await getLibraryState(`spotify:track:${trackId}`);
+            const result = await getLibraryState(`spotify:track:${trackId}`);
 
-        if (result) {
-            setIsCurrentTrackSaved(result.isAdded);
-        } else {
-            setIsCurrentTrackSaved(false);
+            if (result) {
+                setIsCurrentTrackSaved(result.isAdded);
+            } else {
+                setIsCurrentTrackSaved(false);
+            }
+        },
+        [getLibraryState]
+    );
+
+    const fetchAndUpdatePlaybackState = React.useCallback(async () => {
+        const state = await getPlaybackState();
+
+        if (!isFocusedRef.current) {
+            return null;
         }
-    };
 
-    const fetchAndUpdatePlaybackState = async () => {
-        let state: any = null;
-        state = await getPlaybackState();
         setPlaybackState(state as SpotifyCurrentlyPlaying);
 
         if (state && state.item && state.item.id) {
@@ -88,7 +95,9 @@ export default function PlayingScreen() {
         } else {
             progress.setValue(0);
         }
-    };
+
+        return state as SpotifyCurrentlyPlaying | null;
+    }, [getPlaybackState, progress]);
 
     const handlePlayPause = async () => {
         if (!playbackState) return;
@@ -219,13 +228,25 @@ export default function PlayingScreen() {
         React.useCallback(() => {
             isFocusedRef.current = true;
 
+            setPlaybackState(null);
+            setIsCurrentTrackSaved(false);
+            progress.setValue(0);
+
+            let isCancelled = false;
+
             const fetchAll = async () => {
-                if (!isFocusedRef.current || appStateRef.current !== "active") {
+                if (
+                    isCancelled ||
+                    !isFocusedRef.current ||
+                    appStateRef.current !== "active"
+                ) {
                     return;
                 }
 
-                await fetchAndUpdatePlaybackState();
-                const state = await getPlaybackState();
+                const state = await fetchAndUpdatePlaybackState();
+                if (isCancelled || !isFocusedRef.current) {
+                    return;
+                }
                 if (state && state.item && state.item.id) {
                     await checkIfTrackIsSaved(state.item.id);
                 } else {
@@ -239,10 +260,11 @@ export default function PlayingScreen() {
 
             return () => {
                 isFocusedRef.current = false;
+                isCancelled = true;
                 clearInterval(intervalId);
                 log("PlayingScreen unfocused, cleared interval.");
             };
-        }, [])
+        }, [fetchAndUpdatePlaybackState, checkIfTrackIsSaved, progress])
     );
 
     const getArtistNames = (artists: SpotifyArtistSimple[]) => {
