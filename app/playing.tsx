@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
     View,
     StyleSheet,
@@ -54,6 +54,7 @@ export default function PlayingScreen() {
     const progressBarWidthRef = useRef<number | null>(null);
     const appStateRef = useRef(appState);
     const isFocusedRef = useRef(true);
+    const lastCheckedTrackUriRef = useRef<string | null>(null);
 
     // Check if device is online
     const isOnline = networkState.isConnected && networkState.isInternetReachable;
@@ -62,40 +63,57 @@ export default function PlayingScreen() {
         appStateRef.current = appState;
     }, [appState]);
 
-    const checkIfTrackIsSaved = async (trackId: string) => {
+    const checkIfTrackIsSaved = useCallback(async (
+        state: SpotifyCurrentlyPlaying | null
+    ): Promise<void> => {
+        const currentlyPlayingItem = state?.item ?? null;
+        const trackId =
+            currentlyPlayingItem && "id" in currentlyPlayingItem
+                ? (currentlyPlayingItem as { id?: string }).id ?? null
+                : null;
+        const trackUri =
+            currentlyPlayingItem && "uri" in currentlyPlayingItem
+                ? (currentlyPlayingItem as { uri?: string }).uri ?? null
+                : null;
+        const normalizedTrackUri = trackUri ?? (trackId ? `spotify:track:${trackId}` : null);
         const isEpisodeItem =
-            playbackState?.item &&
-            ("isEpisode" in playbackState.item
-                ? (playbackState.item as any).isEpisode
+            state?.currently_playing_type === "episode" ||
+            (currentlyPlayingItem && "isEpisode" in currentlyPlayingItem
+                ? (currentlyPlayingItem as any).isEpisode
                 : false);
 
-        if (
-            !trackId ||
-            playbackState?.currently_playing_type !== "track" ||
-            isEpisodeItem
-        ) {
+        if (!normalizedTrackUri || state?.currently_playing_type !== "track" || isEpisodeItem) {
+            lastCheckedTrackUriRef.current = null;
             setIsCurrentTrackSaved(false);
             return;
         }
 
-        const result = await getLibraryState(`spotify:track:${trackId}`);
-
-        if (result) {
-            setIsCurrentTrackSaved(result.isAdded);
-        } else {
-            setIsCurrentTrackSaved(false);
+        if (lastCheckedTrackUriRef.current === normalizedTrackUri) {
+            return;
         }
-    };
 
-    const fetchAndUpdatePlaybackState = async () => {
-        let state: any = null;
-        state = await getPlaybackState();
-        setPlaybackState(state as SpotifyCurrentlyPlaying);
+        try {
+            const result = await getLibraryState(normalizedTrackUri);
 
-        if (state && state.item && state.item.id) {
-            if (state.progress_ms !== null) {
-                const progressRatio =
-                    state.progress_ms / state.item.duration_ms;
+            if (result) {
+                lastCheckedTrackUriRef.current = normalizedTrackUri;
+                setIsCurrentTrackSaved(result.isAdded);
+            } else {
+                lastCheckedTrackUriRef.current = null;
+            }
+        } catch (error) {
+            lastCheckedTrackUriRef.current = null;
+            logError("Error checking track library state:", error);
+        }
+    }, [getLibraryState]);
+
+    const fetchAndUpdatePlaybackState = useCallback(async () => {
+        const state = (await getPlaybackState()) as SpotifyCurrentlyPlaying | null;
+        setPlaybackState(state);
+
+        if (state && state.item && "duration_ms" in state.item) {
+            if (state.progress_ms !== null && state.item.duration_ms) {
+                const progressRatio = state.progress_ms / state.item.duration_ms;
                 progress.setValue(progressRatio > 0 ? progressRatio : 0);
             } else {
                 progress.setValue(0);
@@ -103,7 +121,11 @@ export default function PlayingScreen() {
         } else {
             progress.setValue(0);
         }
-    };
+
+        await checkIfTrackIsSaved(state);
+
+        return state;
+    }, [checkIfTrackIsSaved, getPlaybackState, progress]);
 
     const handlePlayPause = async () => {
         if (!playbackState) return;
@@ -252,9 +274,11 @@ export default function PlayingScreen() {
             if (currentlySaved) {
                 await removeFromLibrary(`spotify:track:${trackId}`);
                 setIsCurrentTrackSaved(false);
+                lastCheckedTrackUriRef.current = null;
             } else {
                 await addToLibrary(`spotify:track:${trackId}`);
                 setIsCurrentTrackSaved(true);
+                lastCheckedTrackUriRef.current = null;
             }
         }
         catch (error) {
@@ -303,17 +327,6 @@ export default function PlayingScreen() {
                 }
 
                 await fetchAndUpdatePlaybackState();
-                const state = await getPlaybackState();
-                if (
-                    state &&
-                    state.item &&
-                    state.item.id &&
-                    state.currently_playing_type === "track"
-                ) {
-                    await checkIfTrackIsSaved(state.item.id);
-                } else {
-                    setIsCurrentTrackSaved(false);
-                }
             };
 
             fetchAll();
@@ -325,7 +338,7 @@ export default function PlayingScreen() {
                 clearInterval(intervalId);
                 log("PlayingScreen unfocused, cleared interval.");
             };
-        }, [])
+        }, [fetchAndUpdatePlaybackState])
     );
 
     const getArtistNames = (artists: SpotifyArtistSimple[]) => {

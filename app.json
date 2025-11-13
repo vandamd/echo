@@ -2,7 +2,7 @@
   "expo": {
     "name": "Spotify (Light)",
     "slug": "spotify-light",
-    "version": "2.4.0",
+    "version": "2.5.0",
     "orientation": "portrait",
     "scheme": "spotify-light",
     "newArchEnabled": true,
