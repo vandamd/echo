@@ -5,20 +5,13 @@ import { StyledText } from "@/components/StyledText";
 import { MaterialIcons } from "@expo/vector-icons";
 
 interface MediaListItemProps {
-    // Data
     primaryText: string;
     secondaryText?: string;
     imageUri?: string;
-
-    // Icons & Loading
     placeholderIcon?: keyof typeof MaterialIcons.glyphMap;
     isLoading?: boolean;
-
-    // State & Interaction
     disabled?: boolean;
     onPress: () => void;
-
-    // Styling
     imageStyle?: StyleProp<ImageStyle>;
     style?: StyleProp<ViewStyle>;
 }
