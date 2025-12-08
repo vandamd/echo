@@ -2,18 +2,16 @@ import React, { useEffect, useState, useCallback } from "react";
 import {
     View,
     StyleSheet,
-    Image,
     RefreshControl,
 } from "react-native";
 import {
     useAuth,
     SpotifyArtist,
 } from "@/contexts/AuthContext";
-import { HapticPressable } from "@/components/HapticPressable";
 import { StyledText } from "@/components/StyledText";
-import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import ContentContainer from "@/components/ContentContainer";
+import { MediaListItem } from "@/components/MediaListItem";
 import { useTabPreferences } from "@/contexts/TabPreferencesContext";
 import CustomScrollView from "@/components/CustomScrollView";
 import { log, logError } from "@/utils/logger";
@@ -80,41 +78,17 @@ export default function ArtistsScreen() {
 
     const renderArtistItem = ({ item }: { item: SpotifyArtist }) => {
         const isDisabled = !isOnline;
-        
+
         return (
-            <HapticPressable
-                style={[styles.itemContainer, isDisabled && styles.disabledContainer]}
-                onPress={() => handleArtistPress(item, isDisabled)}
+            <MediaListItem
+                primaryText={item.name}
+                imageUri={item.images && item.images.length > 0 ? item.images[0].url : undefined}
+                placeholderIcon="person"
+                isLoading={loadingArtistId === item.id}
                 disabled={isDisabled}
-            >
-                {item.images && item.images.length > 0 ? (
-                    <View style={styles.artistImageContainer}>
-                        <Image
-                            source={{ uri: item.images[0].url }}
-                            style={styles.artistImage}
-                        />
-                        {loadingArtistId === item.id && (
-                            <View style={styles.loadingOverlay}></View>
-                        )}
-                    </View>
-                ) : (
-                    <View style={styles.placeholderImageContainer}>
-                        <MaterialIcons 
-                            name="person" 
-                            size={24} 
-                            color={isDisabled ? "#666" : "white"} 
-                        />
-                        {loadingArtistId === item.id && (
-                            <View style={styles.loadingOverlay}></View>
-                        )}
-                    </View>
-                )}
-                <View style={styles.textContainer}>
-                    <StyledText style={styles.artistName} numberOfLines={1}>
-                        {item.name}
-                    </StyledText>
-                </View>
-            </HapticPressable>
+                onPress={() => handleArtistPress(item, isDisabled)}
+                imageStyle={{ borderRadius: 100 }}
+            />
         );
     };
 
@@ -231,50 +205,5 @@ const styles = StyleSheet.create({
     emptySubText: {
         fontSize: 14,
         textAlign: "center",
-    },
-    itemContainer: {
-        paddingVertical: 0,
-        flexDirection: "row",
-        alignItems: "center",
-    },
-    artistImageContainer: {
-        width: 50,
-        height: 50,
-        marginRight: 15,
-        position: "relative",
-    },
-    artistImage: {
-        width: 50,
-        height: 50,
-        borderRadius: 100,
-    },
-    placeholderImageContainer: {
-        width: 50,
-        height: 50,
-        marginRight: 15,
-        backgroundColor: "#282828",
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    textContainer: {
-        flex: 1,
-        gap: 0,
-    },
-    artistName: {
-        fontSize: 22,
-        lineHeight: 24,
-    },
-    loadingOverlay: {
-        position: "absolute",
-        top: 0,
-        left: 0,
-        width: "100%",
-        height: "100%",
-        backgroundColor: "rgba(0, 0, 0, 0)",
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    disabledContainer: {
-        opacity: 0.3,
     },
 });

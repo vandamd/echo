@@ -2,7 +2,6 @@ import React, { useEffect, useCallback } from "react";
 import {
     View,
     StyleSheet,
-    Image,
     RefreshControl,
 } from "react-native";
 import {
@@ -10,12 +9,11 @@ import {
     SavedTrackObject,
     SpotifyArtistSimple,
 } from "@/contexts/AuthContext";
-import { HapticPressable } from "@/components/HapticPressable";
 import { StyledText } from "@/components/StyledText";
-import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { log, logWarn, logError } from "@/utils/logger";
 import ContentContainer from "@/components/ContentContainer";
+import { MediaListItem } from "@/components/MediaListItem";
 import { useTabPreferences } from "@/contexts/TabPreferencesContext";
 import CustomScrollView from "@/components/CustomScrollView";
 import { useNetworkState } from "@/hooks/useNetworkState";
@@ -123,35 +121,14 @@ export default function LikedSongsScreen() {
         const isDisabled = !isOnline;
 
         return (
-            <HapticPressable
-                style={[styles.itemContainer, isDisabled && styles.disabledContainer]}
-                onPress={() => handleTrackPress(item, index, isDisabled)}
+            <MediaListItem
+                primaryText={item.track.name}
+                secondaryText={getArtistNames(item.track.artists)}
+                imageUri={item.track.album?.images && item.track.album.images.length > 0 ? item.track.album.images[0].url : undefined}
+                placeholderIcon="music-note"
                 disabled={isDisabled}
-            >
-                {item.track.album?.images &&
-                    item.track.album.images.length > 0 ? (
-                    <Image
-                        source={{ uri: item.track.album.images[0].url }}
-                        style={styles.trackImage}
-                    />
-                ) : (
-                    <View style={styles.placeholderImageContainer}>
-                        <MaterialIcons
-                            name="music-note"
-                            size={24}
-                            color={isDisabled ? "#666" : "white"}
-                        />
-                    </View>
-                )}
-                <View style={styles.textContainer}>
-                    <StyledText style={styles.trackName} numberOfLines={1}>
-                        {item.track.name}
-                    </StyledText>
-                    <StyledText style={styles.trackArtist} numberOfLines={1}>
-                        {getArtistNames(item.track.artists)}
-                    </StyledText>
-                </View>
-            </HapticPressable>
+                onPress={() => handleTrackPress(item, index, isDisabled)}
+            />
         );
     };
 
@@ -272,38 +249,5 @@ const styles = StyleSheet.create({
     emptySubText: {
         fontSize: 14,
         textAlign: "center",
-    },
-    itemContainer: {
-        paddingVertical: 0,
-        flexDirection: "row",
-        alignItems: "center",
-    },
-    trackImage: {
-        width: 50,
-        height: 50,
-        marginRight: 15,
-    },
-    placeholderImageContainer: {
-        width: 50,
-        height: 50,
-        marginRight: 15,
-        backgroundColor: "#282828",
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    textContainer: {
-        flex: 1,
-        gap: 0,
-    },
-    trackName: {
-        fontSize: 22,
-        lineHeight: 24,
-    },
-    trackArtist: {
-        fontSize: 16,
-        lineHeight: 18,
-    },
-    disabledContainer: {
-        opacity: 0.3,
     },
 });

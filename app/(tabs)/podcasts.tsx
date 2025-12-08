@@ -2,18 +2,16 @@ import React, { useEffect, useState, useCallback } from "react";
 import {
     View,
     StyleSheet,
-    Image,
     RefreshControl,
 } from "react-native";
 import {
     useAuth,
     SpotifySavedShow,
 } from "@/contexts/AuthContext";
-import { HapticPressable } from "@/components/HapticPressable";
 import { StyledText } from "@/components/StyledText";
-import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import ContentContainer from "@/components/ContentContainer";
+import { MediaListItem } from "@/components/MediaListItem";
 import { useTabPreferences } from "@/contexts/TabPreferencesContext";
 import CustomScrollView from "@/components/CustomScrollView";
 import { log, logError } from "@/utils/logger";
@@ -175,42 +173,15 @@ export default function PodcastsScreen() {
         const isUncached = isOffline && !cachedShowIds.has(item.show.id);
 
         return (
-            <HapticPressable
-                style={[styles.itemContainer, isUncached && styles.disabledContainer]}
-                onPress={() => handleShowPress(item, isUncached)}
+            <MediaListItem
+                primaryText={item.show.name}
+                secondaryText={item.show.publisher}
+                imageUri={item.show.images && item.show.images.length > 0 ? item.show.images[0].url : undefined}
+                placeholderIcon="mic"
+                isLoading={loadingShowId === item.show.id}
                 disabled={isUncached}
-            >
-                {item.show.images && item.show.images.length > 0 ? (
-                    <View style={styles.showImageContainer}>
-                        <Image
-                            source={{ uri: item.show.images[0].url }}
-                            style={styles.showImage}
-                        />
-                        {loadingShowId === item.show.id && (
-                            <View style={styles.loadingOverlay}></View>
-                        )}
-                    </View>
-                ) : (
-                    <View style={styles.placeholderImageContainer}>
-                        <MaterialIcons
-                            name="mic"
-                            size={24}
-                            color={isUncached ? "#666" : "white"}
-                        />
-                        {loadingShowId === item.show.id && (
-                            <View style={styles.loadingOverlay}></View>
-                        )}
-                    </View>
-                )}
-                <View style={styles.textContainer}>
-                    <StyledText style={styles.showName} numberOfLines={1}>
-                        {item.show.name}
-                    </StyledText>
-                    <StyledText style={styles.showPublisher} numberOfLines={1}>
-                        {item.show.publisher}
-                    </StyledText>
-                </View>
-            </HapticPressable>
+                onPress={() => handleShowPress(item, isUncached)}
+            />
         );
     };
 
@@ -309,48 +280,6 @@ const styles = StyleSheet.create({
     listContentContainer: {
         paddingTop: 0,
         paddingBottom: 0,
-    },
-    itemContainer: {
-        paddingVertical: 0,
-        flexDirection: "row",
-        alignItems: "center",
-    },
-    disabledContainer: {
-        opacity: 0.3,
-    },
-    showImageContainer: {
-        width: 50,
-        height: 50,
-        marginRight: 15,
-        position: "relative",
-    },
-    showImage: {
-        width: 50,
-        height: 50,
-    },
-    placeholderImageContainer: {
-        width: 50,
-        height: 50,
-        backgroundColor: "#282828",
-        justifyContent: "center",
-        alignItems: "center",
-        marginRight: 15,
-    },
-    loadingOverlay: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: "rgba(0, 0, 0, 0)",
-    },
-    textContainer: {
-        flex: 1,
-        gap: 0,
-    },
-    showName: {
-        fontSize: 22,
-        lineHeight: 24,
-    },
-    showPublisher: {
-        fontSize: 16,
-        lineHeight: 18,
     },
     emptyText: {
         marginTop: 20,

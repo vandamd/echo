@@ -2,15 +2,13 @@ import React, { useEffect, useState, useCallback } from "react";
 import {
     View,
     StyleSheet,
-    Image,
     RefreshControl,
 } from "react-native";
 import { useAuth, SpotifyPlaylist } from "@/contexts/AuthContext";
-import { HapticPressable } from "@/components/HapticPressable";
 import { StyledText } from "@/components/StyledText";
-import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import ContentContainer from "@/components/ContentContainer";
+import { MediaListItem } from "@/components/MediaListItem";
 import { useTabPreferences } from "@/contexts/TabPreferencesContext";
 import CustomScrollView from "@/components/CustomScrollView";
 import { logError, log } from "@/utils/logger";
@@ -195,30 +193,15 @@ export default function PlaylistsScreen() {
             const isDisabled = !isOnline;
 
             return (
-                <HapticPressable
-                    style={[styles.itemContainer, isDisabled && styles.disabledContainer]}
+                <MediaListItem
+                    primaryText={item.name}
+                    placeholderIcon="add"
+                    disabled={isDisabled}
                     onPress={() => {
                         if (isDisabled) return;
                         handleCreatePlaylistPress();
                     }}
-                    disabled={isDisabled}
-                >
-                    <View style={styles.placeholderImageContainer}>
-                        <MaterialIcons
-                            name="add"
-                            size={24}
-                            color={isDisabled ? "#666" : "white"}
-                        />
-                    </View>
-                    <View style={styles.textContainer}>
-                        <StyledText
-                            style={styles.playlistName}
-                            numberOfLines={1}
-                        >
-                            {item.name}
-                        </StyledText>
-                    </View>
-                </HapticPressable>
+                />
             );
         }
 
@@ -226,42 +209,15 @@ export default function PlaylistsScreen() {
         const isUncached = isOffline && !cachedPlaylistIds.has(item.id);
 
         return (
-            <HapticPressable
-                style={[styles.itemContainer, isUncached && styles.disabledContainer]}
-                onPress={() => handlePlaylistPress(item, isUncached)}
+            <MediaListItem
+                primaryText={item.name}
+                secondaryText={item.owner.display_name || item.owner.id}
+                imageUri={item.images && item.images.length > 0 ? item.images[0].url : undefined}
+                placeholderIcon="music-note"
+                isLoading={loadingPlaylistId === item.id}
                 disabled={isUncached}
-            >
-                {item.images && item.images.length > 0 ? (
-                    <View style={styles.playlistImageContainer}>
-                        <Image
-                            source={{ uri: item.images[0].url }}
-                            style={styles.playlistImage}
-                        />
-                        {loadingPlaylistId === item.id && (
-                            <View style={styles.loadingOverlay}></View>
-                        )}
-                    </View>
-                ) : (
-                    <View style={styles.placeholderImageContainer}>
-                        <MaterialIcons
-                            name="music-note"
-                            size={24}
-                            color={isUncached ? "#666" : "white"}
-                        />
-                        {loadingPlaylistId === item.id && (
-                            <View style={styles.loadingOverlay}></View>
-                        )}
-                    </View>
-                )}
-                <View style={styles.textContainer}>
-                    <StyledText style={styles.playlistName} numberOfLines={1}>
-                        {item.name}
-                    </StyledText>
-                    <StyledText style={styles.playlistOwner} numberOfLines={1}>
-                        {item.owner.display_name || item.owner.id}
-                    </StyledText>
-                </View>
-            </HapticPressable>
+                onPress={() => handlePlaylistPress(item, isUncached)}
+            />
         );
     };
 
@@ -400,51 +356,5 @@ const styles = StyleSheet.create({
     emptySubText: {
         fontSize: 14,
         textAlign: "center",
-    },
-    itemContainer: {
-        paddingVertical: 0,
-        flexDirection: "row",
-        alignItems: "center",
-    },
-    playlistImage: {
-        width: 50,
-        height: 50,
-        marginRight: 15,
-    },
-    placeholderImageContainer: {
-        width: 50,
-        height: 50,
-        marginRight: 15,
-        backgroundColor: "#282828",
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    textContainer: {
-        flex: 1,
-        gap: 0,
-    },
-    playlistName: {
-        fontSize: 22,
-        lineHeight: 24,
-    },
-    playlistOwner: {
-        fontSize: 16,
-        lineHeight: 18,
-    },
-    playlistImageContainer: {
-        position: "relative",
-    },
-    loadingOverlay: {
-        position: "absolute",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: "rgba(0, 0, 0, 0)",
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    disabledContainer: {
-        opacity: 0.3,
     },
 });

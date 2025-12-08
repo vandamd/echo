@@ -2,7 +2,6 @@ import React, { useEffect, useState, useCallback } from "react";
 import {
     View,
     StyleSheet,
-    Image,
     RefreshControl,
 } from "react-native";
 import {
@@ -10,11 +9,10 @@ import {
     SpotifySavedAlbum,
     SpotifyArtistSimple,
 } from "@/contexts/AuthContext";
-import { HapticPressable } from "@/components/HapticPressable";
 import { StyledText } from "@/components/StyledText";
-import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import ContentContainer from "@/components/ContentContainer";
+import { MediaListItem } from "@/components/MediaListItem";
 import { useTabPreferences } from "@/contexts/TabPreferencesContext";
 import CustomScrollView from "@/components/CustomScrollView";
 import { log, logError } from "@/utils/logger";
@@ -171,44 +169,17 @@ export default function AlbumsScreen() {
     const renderAlbumItem = ({ item }: { item: SpotifySavedAlbum }) => {
         const isOffline = !isOnline;
         const isUncached = isOffline && !cachedAlbumIds.has(item.album.id);
-        
+
         return (
-            <HapticPressable
-                style={[styles.itemContainer, isUncached && styles.disabledContainer]}
-                onPress={() => handleAlbumPress(item, isUncached)}
+            <MediaListItem
+                primaryText={item.album.name}
+                secondaryText={getArtistNames(item.album.artists)}
+                imageUri={item.album.images && item.album.images.length > 0 ? item.album.images[0].url : undefined}
+                placeholderIcon="album"
+                isLoading={loadingAlbumId === item.album.id}
                 disabled={isUncached}
-            >
-                {item.album.images && item.album.images.length > 0 ? (
-                    <View style={styles.albumImageContainer}>
-                        <Image
-                            source={{ uri: item.album.images[0].url }}
-                            style={styles.albumImage}
-                        />
-                        {loadingAlbumId === item.album.id && (
-                            <View style={styles.loadingOverlay}></View>
-                        )}
-                    </View>
-                ) : (
-                    <View style={styles.placeholderImageContainer}>
-                        <MaterialIcons 
-                            name="album" 
-                            size={24} 
-                            color={isUncached ? "#666" : "white"} 
-                        />
-                        {loadingAlbumId === item.album.id && (
-                            <View style={styles.loadingOverlay}></View>
-                        )}
-                    </View>
-                )}
-                <View style={styles.textContainer}>
-                    <StyledText style={styles.albumName} numberOfLines={1}>
-                        {item.album.name}
-                    </StyledText>
-                    <StyledText style={styles.albumArtist} numberOfLines={1}>
-                        {getArtistNames(item.album.artists)}
-                    </StyledText>
-                </View>
-            </HapticPressable>
+                onPress={() => handleAlbumPress(item, isUncached)}
+            />
         );
     };
 
@@ -326,53 +297,5 @@ const styles = StyleSheet.create({
     emptySubText: {
         fontSize: 14,
         textAlign: "center",
-    },
-    itemContainer: {
-        paddingVertical: 0,
-        flexDirection: "row",
-        alignItems: "center",
-    },
-    albumImageContainer: {
-        width: 50,
-        height: 50,
-        marginRight: 15,
-        position: "relative",
-    },
-    albumImage: {
-        width: 50,
-        height: 50,
-    },
-    placeholderImageContainer: {
-        width: 50,
-        height: 50,
-        marginRight: 15,
-        backgroundColor: "#282828",
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    textContainer: {
-        flex: 1,
-        gap: 0,
-    },
-    albumName: {
-        fontSize: 22,
-        lineHeight: 24,
-    },
-    albumArtist: {
-        fontSize: 16,
-        lineHeight: 18,
-    },
-    loadingOverlay: {
-        position: "absolute",
-        top: 0,
-        left: 0,
-        width: "100%",
-        height: "100%",
-        backgroundColor: "rgba(0, 0, 0, 0)",
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    disabledContainer: {
-        opacity: 0.3,
     },
 });
