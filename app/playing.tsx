@@ -49,12 +49,15 @@ export default function PlayingScreen() {
     const [playbackState, setPlaybackState] =
         useState<SpotifyCurrentlyPlaying | null>(null);
     const [isCurrentTrackSaved, setIsCurrentTrackSaved] = useState(false);
+    const [pendingSaveOperation, setPendingSaveOperation] = useState(false);
+    const [optimisticSaveState, setOptimisticSaveState] = useState<boolean | null>(null);
 
     const progress = useRef(new Animated.Value(0)).current;
     const progressBarWidthRef = useRef<number | null>(null);
     const appStateRef = useRef(appState);
     const isFocusedRef = useRef(true);
     const lastCheckedTrackUriRef = useRef<string | null>(null);
+    const pausePollingUntilRef = useRef<number | null>(null);
 
     // Check if device is online
     const isOnline = networkState.isConnected && networkState.isInternetReachable;
@@ -66,6 +69,11 @@ export default function PlayingScreen() {
     const checkIfTrackIsSaved = useCallback(async (
         state: SpotifyCurrentlyPlaying | null
     ): Promise<void> => {
+        // Skip check if polling is paused during critical window
+        if (pausePollingUntilRef.current && Date.now() < pausePollingUntilRef.current) {
+            return;
+        }
+
         const currentlyPlayingItem = state?.item ?? null;
         const trackId =
             currentlyPlayingItem && "id" in currentlyPlayingItem
@@ -269,21 +277,38 @@ export default function PlayingScreen() {
 
         const trackId = playbackState.item.id;
         const currentlySaved = isCurrentTrackSaved;
+        const trackUri = `spotify:track:${trackId}`;
+
+        // Optimistic update
+        setPendingSaveOperation(true);
+        setOptimisticSaveState(!currentlySaved);
+        setIsCurrentTrackSaved(!currentlySaved);
+        pausePollingUntilRef.current = Date.now() + 3000; // Pause polling for 3s
 
         try {
-            if (currentlySaved) {
-                await removeFromLibrary(`spotify:track:${trackId}`);
-                setIsCurrentTrackSaved(false);
-                lastCheckedTrackUriRef.current = null;
+            const success = currentlySaved
+                ? await removeFromLibrary(trackUri)
+                : await addToLibrary(trackUri);
+
+            if (success) {
+                // Cache is already updated by service layer
+                // Clear optimistic state after delay
+                setTimeout(() => {
+                    setOptimisticSaveState(null);
+                    pausePollingUntilRef.current = null;
+                    lastCheckedTrackUriRef.current = null; // Force one check after pause
+                }, 3000);
             } else {
-                await addToLibrary(`spotify:track:${trackId}`);
-                setIsCurrentTrackSaved(true);
-                lastCheckedTrackUriRef.current = null;
+                throw new Error("Operation returned false");
             }
-        }
-        catch (error) {
+        } catch (error) {
+            // Rollback on failure
             logError("Error toggling track save status:", error);
-            return;
+            setIsCurrentTrackSaved(currentlySaved); // Revert to original state
+            setOptimisticSaveState(null);
+            pausePollingUntilRef.current = null;
+        } finally {
+            setPendingSaveOperation(false);
         }
     };
 
@@ -608,12 +633,12 @@ export default function PlayingScreen() {
                 <View style={styles.musicControlsExtra}>
                     <HapticPressable
                         onPress={handleToggleSaveTrack}
-                        disabled={isEpisode}
-                        style={isEpisode && styles.disabledButton}
+                        disabled={pendingSaveOperation || isEpisode || !isOnline}
+                        style={(isEpisode || pendingSaveOperation || !isOnline) && styles.disabledButton}
                     >
                         <MaterialIcons
                             name={
-                                isCurrentTrackSaved
+                                (optimisticSaveState ?? isCurrentTrackSaved)
                                     ? "favorite"
                                     : "favorite-outline"
                             }

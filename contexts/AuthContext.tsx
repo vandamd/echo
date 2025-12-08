@@ -891,13 +891,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     );
 
     const addToLibrary = useCallback(
-        (uri: string) => addToLibraryService(uri),
-        []
+        (uri: string) => addToLibraryService(uri, accessToken),
+        [accessToken]
     );
 
     const removeFromLibrary = useCallback(
-        (uri: string) => removeFromLibraryService(uri),
-        []
+        (uri: string) => removeFromLibraryService(uri, accessToken),
+        [accessToken]
     );
 
     const getLibraryState = useCallback(

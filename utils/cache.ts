@@ -368,4 +368,108 @@ export const isShowCached = async (showId: string): Promise<boolean> => {
     }
 };
 
+// Track library cache utilities
+
+export const refreshSavedTracksFromCache = async (): Promise<SavedTrackObject[] | null> => {
+    try {
+        const cachedSavedTracks = await AsyncStorage.getItem(SAVED_TRACKS_KEY);
+        if (cachedSavedTracks) {
+            const parsedTracks = JSON.parse(cachedSavedTracks);
+            log(
+                `Cache: Refreshed saved tracks state from cache - ${parsedTracks.length} tracks`
+            );
+            return parsedTracks;
+        }
+    } catch (error) {
+        logError(
+            "Cache: Error refreshing saved tracks from cache:",
+            error
+        );
+    }
+    return null;
+};
+
+export const isTrackInSavedCache = async (trackId: string): Promise<boolean> => {
+    try {
+        const cachedSavedTracks = await AsyncStorage.getItem(SAVED_TRACKS_KEY);
+        if (cachedSavedTracks) {
+            const parsedTracks = JSON.parse(cachedSavedTracks);
+            const isTrackInCache = parsedTracks.some(
+                (savedTrack: SavedTrackObject) => savedTrack.track?.id === trackId
+            );
+            return isTrackInCache;
+        }
+    } catch (error) {
+        logError("Cache: Error checking if track is in cache:", error);
+    }
+    return false;
+};
+
+export const addTrackToSavedCache = async (
+    trackUri: string,
+    accessToken: string | null
+): Promise<void> => {
+    try {
+        // Extract track ID from URI (spotify:track:xxxxx)
+        const trackId = trackUri.replace("spotify:track:", "");
+
+        if (!accessToken) {
+            log("Cache: Cannot fetch track details - no access token");
+            return;
+        }
+
+        // Fetch track details from API
+        const trackResponse = await fetch(
+            `https://api.spotify.com/v1/tracks/${trackId}`,
+            {
+                headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                },
+            }
+        );
+
+        if (trackResponse.ok) {
+            const trackData = await trackResponse.json();
+            const cachedTracks = await AsyncStorage.getItem(SAVED_TRACKS_KEY);
+            let parsedTracks = cachedTracks ? JSON.parse(cachedTracks) : [];
+
+            // Add the new saved track to the beginning of the cache
+            const newSavedTrack: SavedTrackObject = {
+                added_at: new Date().toISOString(),
+                track: trackData,
+            };
+            parsedTracks.unshift(newSavedTrack);
+
+            await AsyncStorage.setItem(
+                SAVED_TRACKS_KEY,
+                JSON.stringify(parsedTracks)
+            );
+            log(`Cache: Updated cached tracks - added track ${trackId}`);
+        } else {
+            log(`Cache: Failed to fetch track details for ${trackId}`);
+        }
+    } catch (error) {
+        logError("Cache: Error adding track to cache:", error);
+    }
+};
+
+export const removeTrackFromSavedCache = async (trackId: string): Promise<void> => {
+    try {
+        const cachedTracks = await AsyncStorage.getItem(SAVED_TRACKS_KEY);
+        if (cachedTracks) {
+            let parsedTracks = JSON.parse(cachedTracks);
+            parsedTracks = parsedTracks.filter(
+                (savedTrack: SavedTrackObject) => savedTrack.track?.id !== trackId
+            );
+            await AsyncStorage.setItem(
+                SAVED_TRACKS_KEY,
+                JSON.stringify(parsedTracks)
+            );
+            log(`Cache: Updated cached tracks - removed track ${trackId}`);
+        }
+    } catch (error) {
+        logError("Cache: Error removing track from cache:", error);
+    }
+};
+
 
