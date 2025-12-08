@@ -15,7 +15,6 @@ import {
     removeTrackFromSavedCache,
 } from "../utils/cache";
 
-// Request deduplication map to prevent concurrent duplicate API calls
 const inFlightLibraryChecks = new Map<string, Promise<{ isAdded: boolean; canAdd: boolean } | null>>();
 
 export const ensureAppRemoteConnection = async (): Promise<boolean> => {
@@ -821,7 +820,6 @@ export const addToLibrary = async (uri: string, accessToken?: string | null): Pr
         const result = await SpotifySdk.addToLibrary(uri);
         log(`Playback: Added to library: ${uri}`, result);
 
-        // Update cache if operation succeeded and we have an access token
         if (result.added && accessToken) {
             await addTrackToSavedCache(uri, accessToken);
         }
@@ -843,7 +841,6 @@ export const removeFromLibrary = async (uri: string, accessToken?: string | null
         const result = await SpotifySdk.removeFromLibrary(uri);
         log(`Playback: Removed from library: ${uri}`, result);
 
-        // Update cache if operation succeeded
         if (result.removed) {
             const trackId = uri.replace("spotify:track:", "");
             await removeTrackFromSavedCache(trackId);
@@ -857,48 +854,31 @@ export const removeFromLibrary = async (uri: string, accessToken?: string | null
 };
 
 export const getLibraryState = async (uri: string): Promise<{ isAdded: boolean; canAdd: boolean } | null> => {
-    try {
-        // Check if request is already in-flight (deduplication)
-        if (inFlightLibraryChecks.has(uri)) {
-            log(`Playback: Reusing in-flight library check for ${uri}`);
-            return await inFlightLibraryChecks.get(uri)!;
+    if (inFlightLibraryChecks.has(uri)) {
+        log(`Playback: Reusing in-flight library check for ${uri}`);
+        return await inFlightLibraryChecks.get(uri)!;
+    }
+
+    const requestPromise = (async () => {
+        const trackId = uri.replace("spotify:track:", "");
+
+        const isInCache = await isTrackInSavedCache(trackId);
+        if (isInCache) {
+            log(`Playback: Track ${trackId} found in cache - returning saved state`);
+            return { isAdded: true, canAdd: true };
         }
 
-        // Create the request promise
-        const requestPromise = (async () => {
-            try {
-                // Extract track ID from URI (spotify:track:xxxxx)
-                const trackId = uri.replace("spotify:track:", "");
+        const connected = await ensureAppRemoteConnection();
+        if (!connected) {
+            log("Playback: Cannot get library state - App Remote not connected");
+            return null;
+        }
 
-                // Check cache first (cache-first strategy)
-                const isInCache = await isTrackInSavedCache(trackId);
-                if (isInCache) {
-                    log(`Playback: Track ${trackId} found in cache - returning saved state`);
-                    return { isAdded: true, canAdd: true };
-                }
-
-                // Cache miss - call SDK API
-                const connected = await ensureAppRemoteConnection();
-                if (!connected) {
-                    log("Playback: Cannot get library state - App Remote not connected");
-                    return null;
-                }
-
-                const result = await SpotifySdk.getLibraryState(uri);
-                return result;
-            } finally {
-                // Clean up in-flight map
-                inFlightLibraryChecks.delete(uri);
-            }
-        })();
-
-        // Store in in-flight map
-        inFlightLibraryChecks.set(uri, requestPromise);
-
-        return await requestPromise;
-    } catch (error) {
-        logError("Playback: Error getting library state:", error);
+        const result = await SpotifySdk.getLibraryState(uri);
         inFlightLibraryChecks.delete(uri);
-        return null;
-    }
+        return result;
+    })();
+
+    inFlightLibraryChecks.set(uri, requestPromise);
+    return await requestPromise;
 };

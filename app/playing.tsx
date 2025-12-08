@@ -69,28 +69,18 @@ export default function PlayingScreen() {
     const checkIfTrackIsSaved = useCallback(async (
         state: SpotifyCurrentlyPlaying | null
     ): Promise<void> => {
-        // Skip check if polling is paused during critical window
         if (pausePollingUntilRef.current && Date.now() < pausePollingUntilRef.current) {
             return;
         }
 
-        const currentlyPlayingItem = state?.item ?? null;
-        const trackId =
-            currentlyPlayingItem && "id" in currentlyPlayingItem
-                ? (currentlyPlayingItem as { id?: string }).id ?? null
-                : null;
-        const trackUri =
-            currentlyPlayingItem && "uri" in currentlyPlayingItem
-                ? (currentlyPlayingItem as { uri?: string }).uri ?? null
-                : null;
-        const normalizedTrackUri = trackUri ?? (trackId ? `spotify:track:${trackId}` : null);
-        const isEpisodeItem =
-            state?.currently_playing_type === "episode" ||
-            (currentlyPlayingItem && "isEpisode" in currentlyPlayingItem
-                ? (currentlyPlayingItem as any).isEpisode
-                : false);
+        const item = state?.item;
+        const trackId = item && "id" in item ? (item as { id?: string }).id : null;
+        const trackUri = item && "uri" in item ? (item as { uri?: string }).uri : null;
+        const normalizedTrackUri = trackUri || (trackId ? `spotify:track:${trackId}` : null);
+        const isEpisode = state?.currently_playing_type === "episode" ||
+            (item && "isEpisode" in item ? (item as any).isEpisode : false);
 
-        if (!normalizedTrackUri || state?.currently_playing_type !== "track" || isEpisodeItem) {
+        if (!normalizedTrackUri || state?.currently_playing_type !== "track" || isEpisode) {
             lastCheckedTrackUriRef.current = null;
             setIsCurrentTrackSaved(false);
             return;
@@ -100,18 +90,12 @@ export default function PlayingScreen() {
             return;
         }
 
-        try {
-            const result = await getLibraryState(normalizedTrackUri);
-
-            if (result) {
-                lastCheckedTrackUriRef.current = normalizedTrackUri;
-                setIsCurrentTrackSaved(result.isAdded);
-            } else {
-                lastCheckedTrackUriRef.current = null;
-            }
-        } catch (error) {
+        const result = await getLibraryState(normalizedTrackUri);
+        if (result) {
+            lastCheckedTrackUriRef.current = normalizedTrackUri;
+            setIsCurrentTrackSaved(result.isAdded);
+        } else {
             lastCheckedTrackUriRef.current = null;
-            logError("Error checking track library state:", error);
         }
     }, [getLibraryState]);
 
@@ -279,37 +263,27 @@ export default function PlayingScreen() {
         const currentlySaved = isCurrentTrackSaved;
         const trackUri = `spotify:track:${trackId}`;
 
-        // Optimistic update
         setPendingSaveOperation(true);
         setOptimisticSaveState(!currentlySaved);
         setIsCurrentTrackSaved(!currentlySaved);
-        pausePollingUntilRef.current = Date.now() + 3000; // Pause polling for 3s
+        pausePollingUntilRef.current = Date.now() + 3000;
 
-        try {
-            const success = currentlySaved
-                ? await removeFromLibrary(trackUri)
-                : await addToLibrary(trackUri);
+        const success = currentlySaved
+            ? await removeFromLibrary(trackUri)
+            : await addToLibrary(trackUri);
 
-            if (success) {
-                // Cache is already updated by service layer
-                // Clear optimistic state after delay
-                setTimeout(() => {
-                    setOptimisticSaveState(null);
-                    pausePollingUntilRef.current = null;
-                    lastCheckedTrackUriRef.current = null; // Force one check after pause
-                }, 3000);
-            } else {
-                throw new Error("Operation returned false");
-            }
-        } catch (error) {
-            // Rollback on failure
-            logError("Error toggling track save status:", error);
-            setIsCurrentTrackSaved(currentlySaved); // Revert to original state
+        if (success) {
+            setTimeout(() => {
+                setOptimisticSaveState(null);
+                pausePollingUntilRef.current = null;
+                lastCheckedTrackUriRef.current = null;
+            }, 3000);
+        } else {
+            setIsCurrentTrackSaved(currentlySaved);
             setOptimisticSaveState(null);
             pausePollingUntilRef.current = null;
-        } finally {
-            setPendingSaveOperation(false);
         }
+        setPendingSaveOperation(false);
     };
 
     const handleNavigateToAddToPlaylist = usePreventDoubleTap(() => {
