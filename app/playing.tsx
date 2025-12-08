@@ -17,6 +17,7 @@ import { MaterialIcons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useFocusEffect, router } from "expo-router";
 import { HapticPressable } from "@/components/HapticPressable";
 import ContentContainer from "@/components/ContentContainer";
+import { MarqueeText } from "@/components/MarqueeText";
 import { useInvertColors } from "@/contexts/InvertColorsContext";
 import { log, logError } from "@/utils/logger";
 import { usePreventDoubleTap } from "@/hooks/usePreventDoubleTap";
@@ -468,9 +469,9 @@ export default function PlayingScreen() {
                         onPress={handleTitlePress}
                         disabled={!(isEpisode ? canNavigateToShow : canNavigateToAlbum)}
                     >
-                        <StyledText style={styles.trackName} numberOfLines={1}>
+                        <MarqueeText style={styles.trackName} isActive={isFocusedRef.current}>
                             {displayTitle}
-                        </StyledText>
+                        </MarqueeText>
                     </HapticPressable>
                     <HapticPressable
                         onPress={handleSubtitlePress}
@@ -674,7 +675,7 @@ const styles = StyleSheet.create({
     },
     trackInfoContainer: {
         alignItems: "center",
-        width: "100%",
+        width: "90%",
         marginBottom: 20,
     },
     trackName: {
