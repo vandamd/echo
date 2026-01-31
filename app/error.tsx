@@ -6,6 +6,7 @@ import { StyledText } from "@/shared/components/StyledText";
 import { HapticPressable } from "@/shared/components/HapticPressable";
 import { useSettings } from "@/features/settings";
 import { useCredentials } from "@/features/credentials";
+import { n } from "@/shared/utils";
 
 export default function ErrorScreen() {
 	const router = useRouter();
@@ -49,9 +50,9 @@ export default function ErrorScreen() {
 
 const styles = StyleSheet.create({
 	messageText: {
-		fontSize: 18,
+		fontSize: n(18),
 		marginHorizontal: 0,
-		marginTop: 10,
+		marginTop: n(10),
 	},
 	buttonContainer: {
 		width: "100%",
@@ -60,14 +61,14 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 	},
 	button: {
-		paddingVertical: 15,
-		paddingHorizontal: 30,
+		paddingVertical: n(15),
+		paddingHorizontal: n(30),
 		alignItems: "center",
 		justifyContent: "flex-end",
-		minWidth: 200,
+		minWidth: n(200),
 	},
 	buttonText: {
-		fontSize: 40,
+		fontSize: n(40),
 		textTransform: "uppercase",
 	},
 });
