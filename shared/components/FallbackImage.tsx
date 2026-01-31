@@ -47,12 +47,14 @@ export function FallbackImage({
     }
 
     return (
-        <Image
-            source={{ uri }}
-            style={style}
-            fadeDuration={fadeDuration}
-            onError={() => setHasError(true)}
-        />
+        <View style={containerStyle}>
+            <Image
+                source={{ uri }}
+                style={style}
+                fadeDuration={fadeDuration}
+                onError={() => setHasError(true)}
+            />
+        </View>
     );
 }
 

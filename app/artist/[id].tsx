@@ -9,7 +9,7 @@ import { useSpotifyLibrary } from "@/features/library/contexts/LibraryContext";
 import { usePlayback } from "@/features/playback/contexts/PlaybackContext";
 import type { SpotifyArtist, SpotifyTrack, SpotifyAlbumSimple } from "@/shared/types/spotify";
 import { StyledText, HapticPressable, ContentContainer, CustomScrollView, TrackListItem, ListFooter, FallbackImage } from "@/shared/components";
-import { log, logError } from "@/shared/utils";
+import { log, logError, n } from "@/shared/utils";
 import { usePreventDoubleTap, useSaveStatus, useNetworkState } from "@/shared/hooks";
 import { detailScreenStyles } from "@/shared/styles/detailScreen";
 import { useSettings } from "@/features/settings";
@@ -304,12 +304,12 @@ export default function ArtistDetailScreen() {
     return (
         <ContentContainer
             headerTitle={displayName}
-            style={{ paddingHorizontal: 20 }}
+            style={{ paddingHorizontal: n(20) }}
             headerIcon={isFollowingArtist ? "remove" : "add"}
             headerIconPress={handleToggleFollowArtist}
             headerIconShowLength={isCheckingFollowingArtist ? 0 : 1}
         >
-            <View style={{ paddingBottom: 20 }}>
+            <View style={{ paddingBottom: n(20) }}>
                 <CustomScrollView
                     ListHeaderComponent={
                         !hideDetailCovers && displayImageUrl ? (
@@ -329,7 +329,7 @@ export default function ArtistDetailScreen() {
                         if (
                             leadingItem.type === 'album'
                         ) {
-                            return <View style={{ height: 8 }} />;
+                            return <View style={{ height: n(8) }} />;
                         }
                         return null;
                     }}
@@ -358,24 +358,24 @@ export default function ArtistDetailScreen() {
 
 const styles = StyleSheet.create({
     itemContainer: {
-        minHeight: 50,
+        minHeight: n(50),
         flexDirection: "row",
         alignItems: "center",
     },
     albumImageContainer: {
-        width: 50,
-        height: 50,
-        marginRight: 15,
+        width: n(50),
+        height: n(50),
+        marginRight: n(15),
         position: "relative",
     },
     albumImage: {
-        width: 50,
-        height: 50,
+        width: n(50),
+        height: n(50),
     },
     placeholderImageContainer: {
-        width: 50,
-        height: 50,
-        marginRight: 15,
+        width: n(50),
+        height: n(50),
+        marginRight: n(15),
         backgroundColor: "#282828",
         justifyContent: "center",
         alignItems: "center",
@@ -384,17 +384,17 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     albumName: {
-        fontSize: 22,
-        lineHeight: 24,
+        fontSize: n(22),
+        lineHeight: n(24),
     },
     albumArtist: {
-        fontSize: 16,
-        lineHeight: 18,
+        fontSize: n(16),
+        lineHeight: n(18),
     },
     sectionTitle: {
-        fontSize: 20,
-        marginTop: 10,
-        marginBottom: 10,
+        fontSize: n(20),
+        marginTop: n(10),
+        marginBottom: n(10),
         alignSelf: "flex-start",
     },
 });
