@@ -1,6 +1,7 @@
 import React from "react";
 import { MaterialIcons } from "@expo/vector-icons";
 import { StyleSheet, View } from "react-native";
+import { n } from "@/shared/utils";
 import { HapticPressable } from "./HapticPressable";
 import { StyledText } from "./StyledText";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
@@ -56,7 +57,7 @@ export function Navbar({
                     >
                         <MaterialIcons
                             name={tab.iconName}
-                            size={48}
+                            size={n(48)}
                             color={
                                 tab.screenName === currentScreenName
                                     ? invertColors ? "black" : "white"
@@ -80,15 +81,15 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
-        paddingVertical: 11,
-        paddingHorizontal: 20,
+        paddingVertical: n(11),
+        paddingHorizontal: n(20),
     },
     offlineStrip: {
-        height: 18,
+        height: n(18),
         justifyContent: "center",
         alignItems: "center",
     },
     offlineText: {
-        fontSize: 12,
+        fontSize: n(12),
     },
 });

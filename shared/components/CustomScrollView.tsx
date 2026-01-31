@@ -8,11 +8,10 @@ import {
     NativeSyntheticEvent,
     NativeScrollEvent,
 } from "react-native";
+import { n } from "@/shared/utils";
 import { useSettings } from "@/features/settings";
 
-interface CustomScrollViewProps<T = any> extends FlatListProps<T> {
-    // We can add any custom props here if needed in the future
-}
+interface CustomScrollViewProps<T = any> extends FlatListProps<T> {}
 
 const CustomScrollView = <T,>({
     style,
@@ -30,8 +29,8 @@ const CustomScrollView = <T,>({
             contentHeight > scrollViewHeight
             ? Math.max(
                 (scrollViewHeight * scrollViewHeight) / contentHeight,
-                20
-            ) // Min height of 20
+                n(20)
+            )
             : 0;
 
     const scrollIndicatorPosition =
@@ -41,7 +40,7 @@ const CustomScrollView = <T,>({
                 outputRange: [0, scrollViewHeight - scrollIndicatorHeight],
                 extrapolate: "clamp",
             })
-            : 0;
+            : new Animated.Value(0);
 
     const handleScroll = Animated.event(
         [{ nativeEvent: { contentOffset: { y: scrollY } } }],
@@ -83,7 +82,7 @@ const CustomScrollView = <T,>({
                 <View
                     style={[
                         styles.scrollIndicatorTrack,
-                        { transform: [{ translateX: 1 }] },
+                        { transform: [{ translateX: n(1) }] },
                         { backgroundColor: invertColors ? "black" : "white" },
                     ]}
                 >
@@ -97,12 +96,7 @@ const CustomScrollView = <T,>({
                             },
                             {
                                 height: scrollIndicatorHeight,
-                                transform: [
-                                    {
-                                        translateY:
-                                            scrollIndicatorPosition as any,
-                                    },
-                                ],
+                                transform: [{ translateY: scrollIndicatorPosition }],
                             },
                         ]}
                     />
@@ -119,15 +113,15 @@ const styles = StyleSheet.create({
         width: "100%",
     },
     scrollIndicatorTrack: {
-        width: 1,
+        width: n(1),
         height: "100%",
         position: "absolute",
-        right: -2,
+        right: n(-2),
     },
     scrollIndicatorThumb: {
-        width: 5,
+        width: n(5),
         position: "absolute",
-        right: -2,
+        right: n(-2),
     },
 });
 

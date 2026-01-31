@@ -2,6 +2,7 @@ import React from "react";
 import { MaterialIcons } from "@expo/vector-icons";
 import { StyleSheet, View } from "react-native";
 import { router } from "expo-router";
+import { n } from "@/shared/utils";
 import { StyledText } from "./StyledText";
 import { HapticPressable } from "./HapticPressable";
 import { useSettings } from "@/features/settings";
@@ -34,6 +35,8 @@ export function Header({
             }
         };
 
+    const iconColor = invertColors ? "black" : "white";
+
     return (
         <View
             style={[
@@ -43,73 +46,41 @@ export function Header({
         >
             {!hideBackButton ? (
                 <HapticPressable onPress={handleBack}>
-                    <View
-                        style={{
-                            width: 32,
-                            height: 32,
-                            alignItems: "center",
-                            paddingTop: 6,
-                            paddingRight: 4,
-                        }}
-                    >
+                    <View style={styles.iconContainerLeft}>
                         <MaterialIcons
                             name="arrow-back-ios"
-                            size={28}
-                            color={invertColors ? "black" : "white"}
+                            size={n(28)}
+                            color={iconColor}
                         />
                     </View>
                 </HapticPressable>
             ) : (
-                <View
-                    style={{
-                        width: 32,
-                        height: 32,
-                        alignItems: "center",
-                        paddingTop: 6,
-                        paddingRight: 4,
-                    }}
-                ></View>
+                <View style={styles.iconContainerLeft} />
             )}
 
             {onTitlePress ? (
-                <HapticPressable onPress={onTitlePress} style={{ maxWidth: "75%" }}>
-                    <StyledText style={[styles.title, { maxWidth: "100%" }]} numberOfLines={1}>
+                <HapticPressable onPress={onTitlePress} style={styles.titlePressable}>
+                    <StyledText style={styles.title} numberOfLines={1}>
                         {headerTitle}
                     </StyledText>
                 </HapticPressable>
             ) : (
-                <StyledText style={[styles.title]} numberOfLines={1}>
+                <StyledText style={styles.title} numberOfLines={1}>
                     {headerTitle}
                 </StyledText>
             )}
             {iconShowLength > 0 && iconName ? (
                 <HapticPressable onPress={onIconPress}>
-                    <View
-                        style={{
-                            width: 32,
-                            height: 32,
-                            alignItems: "center",
-                            paddingTop: 6,
-                            paddingLeft: 4,
-                        }}
-                    >
+                    <View style={styles.iconContainerRight}>
                         <MaterialIcons
                             name={iconName}
-                            size={28}
-                            color={invertColors ? "black" : "white"}
+                            size={n(28)}
+                            color={iconColor}
                         />
                     </View>
                 </HapticPressable>
             ) : (
-                <View
-                    style={{
-                        width: 32,
-                        height: 32,
-                        alignItems: "center",
-                        paddingTop: 6,
-                        paddingLeft: 4,
-                    }}
-                ></View>
+                <View style={styles.iconContainerRight} />
             )}
         </View>
     );
@@ -120,15 +91,31 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
-        paddingHorizontal: 22,
-        paddingVertical: 5,
+        paddingHorizontal: n(22),
+        paddingVertical: n(5),
         zIndex: 1,
     },
+    iconContainerLeft: {
+        width: n(32),
+        height: n(32),
+        alignItems: "center",
+        paddingTop: n(6),
+        paddingRight: n(4),
+    },
+    iconContainerRight: {
+        width: n(32),
+        height: n(32),
+        alignItems: "center",
+        paddingTop: n(6),
+        paddingLeft: n(4),
+    },
+    titlePressable: {
+        maxWidth: "75%",
+    },
     title: {
-        fontSize: 20,
+        fontSize: n(20),
         fontFamily: "PublicSans-Regular",
-        paddingTop: 2,
+        paddingTop: n(2),
         maxWidth: "75%",
     },
 });
-

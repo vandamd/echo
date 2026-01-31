@@ -1,8 +1,8 @@
 import React from "react";
 import { View, StyleSheet } from "react-native";
+import { n, formatDuration, getArtistNames } from "@/shared/utils";
 import { StyledText } from "./StyledText";
 import { HapticPressable } from "./HapticPressable";
-import { formatDuration, getArtistNames } from "@/shared/utils";
 
 interface Artist {
     name: string;
@@ -48,23 +48,23 @@ const styles = StyleSheet.create({
         width: "100%",
     },
     trackNumber: {
-        fontSize: 26,
-        paddingRight: 8,
+        fontSize: n(26),
+        paddingRight: n(8),
         textAlign: "center",
-        width: 56,
+        width: n(56),
     },
     textContainer: {
         flex: 1,
         alignItems: "flex-start",
-        paddingRight: 10,
+        paddingRight: n(10),
     },
     trackName: {
         flex: 1,
-        fontSize: 26,
+        fontSize: n(26),
     },
     subtitle: {
-        fontSize: 16,
-        lineHeight: 18,
-        paddingBottom: 6,
+        fontSize: n(16),
+        lineHeight: n(18),
+        paddingBottom: n(6),
     },
 });

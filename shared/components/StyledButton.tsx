@@ -1,5 +1,6 @@
 import React from "react";
 import { StyleSheet } from "react-native";
+import { n } from "@/shared/utils";
 import { StyledText } from "./StyledText";
 import { HapticPressable } from "./HapticPressable";
 
@@ -23,6 +24,6 @@ const styles = StyleSheet.create({
         alignItems: "center",
     },
     buttonText: {
-        fontSize: 30,
+        fontSize: n(30),
     },
 });

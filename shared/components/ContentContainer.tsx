@@ -1,5 +1,6 @@
 import React, { ReactNode } from "react";
 import { View, StyleSheet, StyleProp, ViewStyle } from "react-native";
+import { n } from "@/shared/utils";
 import { Header } from "@/shared/components/Header";
 import { useSettings } from "@/features/settings";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -27,7 +28,7 @@ export default function ContentContainer({
     headerIconShowLength = 1,
     style,
     onTitlePress,
-    gap = 47,
+    gap = n(47),
 }: ContentContainerProps) {
     const { invertColors } = useSettings();
     return (
@@ -62,7 +63,7 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: "flex-start",
         alignItems: "flex-start",
-        paddingHorizontal: 37,
-        paddingTop: 14,
+        paddingHorizontal: n(37),
+        paddingTop: n(14),
     },
 });

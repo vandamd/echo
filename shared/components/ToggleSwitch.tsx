@@ -1,5 +1,6 @@
 import React from "react";
 import { View, StyleSheet } from "react-native";
+import { n } from "@/shared/utils";
 import { StyledText } from "./StyledText";
 import { HapticPressable } from "./HapticPressable";
 import { useSettings } from "@/features/settings";
@@ -10,10 +11,10 @@ interface ToggleSwitchGraphicProps {
 	disabled?: boolean;
 }
 
-const CIRCLE_DIAMETER = 9.8;
-const CIRCLE_BORDER = 2.5;
-const LINE_WIDTH = 14.5;
-const LINE_HEIGHT = 2.22;
+const CIRCLE_DIAMETER = n(9.8);
+const CIRCLE_BORDER = n(2.5);
+const LINE_WIDTH = n(14.5);
+const LINE_HEIGHT = n(2.22);
 
 const ToggleSwitchGraphic = ({ value }: ToggleSwitchGraphicProps) => {
 	const { invertColors } = useSettings();
@@ -109,7 +110,7 @@ export function ToggleSwitch({
 					>
 						<MaterialIcons
 							name="keyboard-arrow-down"
-							size={32}
+							size={n(32)}
 							color={isLast ? disabledColor : iconColor}
 						/>
 					</HapticPressable>
@@ -120,7 +121,7 @@ export function ToggleSwitch({
 					>
 						<MaterialIcons
 							name="keyboard-arrow-up"
-							size={32}
+							size={n(32)}
 							color={isFirst ? disabledColor : iconColor}
 						/>
 					</HapticPressable>
@@ -134,7 +135,7 @@ const styles = StyleSheet.create({
 	container: {
 		flexDirection: "row",
 		alignItems: "center",
-		paddingTop: 9,
+		paddingTop: n(9),
 		width: "100%",
 	},
 	toggleArea: {
@@ -143,23 +144,22 @@ const styles = StyleSheet.create({
 		flex: 1,
 	},
 	switchTouchable: {
-		marginTop: 12,
-		marginRight: 20,
-		marginLeft: 8.5,
+		marginTop: n(12),
+		marginRight: n(20),
+		marginLeft: n(8.5),
 	},
 	textTouchable: {
 		flex: 1,
 	},
 	label: {
-		fontSize: 30,
+		fontSize: n(30),
 	},
 	arrowContainer: {
 		flexDirection: "row",
 		alignItems: "center",
-		gap: 4,
+		gap: n(4),
 	},
 	arrowButton: {
-		padding: 4,
+		padding: n(4),
 	},
 });
-

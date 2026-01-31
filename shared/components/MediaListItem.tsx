@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { View, StyleSheet, Image, StyleProp, ViewStyle, ImageStyle } from "react-native";
+import { n } from "@/shared/utils";
 import { HapticPressable } from "@/shared/components/HapticPressable";
 import { StyledText } from "@/shared/components/StyledText";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -44,7 +45,7 @@ export function MediaListItem({
                     <View style={[styles.placeholderImageContainer, imageStyle]}>
                         <MaterialIcons
                             name={placeholderIcon}
-                            size={24}
+                            size={n(24)}
                             color={disabled ? "#666" : "white"}
                         />
                         {isLoading && <View style={styles.loadingOverlay} />}
@@ -76,25 +77,25 @@ export function MediaListItem({
 
 const styles = StyleSheet.create({
     itemContainer: {
-        minHeight: 50,
+        minHeight: n(50),
         paddingVertical: 0,
         flexDirection: "row",
         alignItems: "center",
     },
     imageContainer: {
-        width: 50,
-        height: 50,
-        marginRight: 15,
+        width: n(50),
+        height: n(50),
+        marginRight: n(15),
         position: "relative",
     },
     image: {
-        width: 50,
-        height: 50,
+        width: n(50),
+        height: n(50),
     },
     placeholderImageContainer: {
-        width: 50,
-        height: 50,
-        marginRight: 15,
+        width: n(50),
+        height: n(50),
+        marginRight: n(15),
         backgroundColor: "#282828",
         justifyContent: "center",
         alignItems: "center",
@@ -102,15 +103,15 @@ const styles = StyleSheet.create({
     textContainer: {
         flex: 1,
         gap: 0,
-        paddingRight: 10,
+        paddingRight: n(10),
     },
     primaryText: {
-        fontSize: 22,
-        lineHeight: 24,
+        fontSize: n(22),
+        lineHeight: n(24),
     },
     secondaryText: {
-        fontSize: 16,
-        lineHeight: 18,
+        fontSize: n(16),
+        lineHeight: n(18),
     },
     loadingOverlay: {
         position: "absolute",

@@ -1,4 +1,5 @@
 import { StyleSheet } from "react-native";
+import { n } from "@/shared/utils";
 
 export const detailScreenStyles = StyleSheet.create({
     centeredMessageContainer: {
@@ -6,30 +7,30 @@ export const detailScreenStyles = StyleSheet.create({
         backgroundColor: "black",
         justifyContent: "center",
         alignItems: "center",
-        padding: 20,
+        padding: n(20),
     },
     errorText: {
-        fontSize: 16,
+        fontSize: n(16),
         textAlign: "center",
     },
     emptyText: {
-        fontSize: 16,
+        fontSize: n(16),
         textAlign: "center",
-        marginTop: 20,
+        marginTop: n(20),
     },
     imageContainer: {
         alignItems: "center",
-        paddingBottom: 20,
+        paddingBottom: n(20),
     },
     image: {
-        width: 200,
-        height: 200,
-        marginBottom: 10,
+        width: n(200),
+        height: n(200),
+        marginBottom: n(10),
     },
     placeholderImageContainer: {
-        width: 200,
-        height: 200,
-        marginBottom: 10,
+        width: n(200),
+        height: n(200),
+        marginBottom: n(10),
         backgroundColor: "#282828",
         justifyContent: "center",
         alignItems: "center",
@@ -55,7 +56,7 @@ export const tabScreenStyles = StyleSheet.create({
         alignItems: "center",
     },
     emptyText: {
-        marginTop: 20,
+        marginTop: n(20),
         textAlign: "center",
     },
 });
