@@ -53,8 +53,7 @@ export default function CustomiseTabsScreen() {
     return (
         <ContentContainer
             headerTitle="Customise"
-            gap={0}
-            style={{ paddingRight: n(20), paddingBottom: n(20) }}
+            style={{ paddingRight: n(20), paddingBottom: n(20), gap: 0 }}
         >
             <CustomScrollView
                 data={settingsItems}

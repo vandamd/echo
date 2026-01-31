@@ -2,6 +2,7 @@ import React from "react";
 import { ToggleSwitch } from "@/shared/components/ToggleSwitch";
 import { useSettings, TabId } from "@/features/settings";
 import ContentContainer from "@/shared/components/ContentContainer";
+import { n } from "@/shared/utils";
 
 interface TabConfig {
     id: TabId;
@@ -33,7 +34,7 @@ export default function CustomiseTabsScreen() {
     return (
         <ContentContainer
             headerTitle="Customise Tabs"
-            gap={20}
+            style={{ gap: n(20) }}
         >
             {orderedTabs.map((tab, index) => (
                 <ToggleSwitch
