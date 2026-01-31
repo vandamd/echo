@@ -28,7 +28,7 @@ export default function ContentContainer({
     headerIconShowLength = 1,
     style,
     onTitlePress,
-    gap = n(47),
+    gap = 47,
 }: ContentContainerProps) {
     const { invertColors } = useSettings();
     return (
@@ -49,7 +49,7 @@ export default function ContentContainer({
                     onTitlePress={onTitlePress}
                 />
             )}
-            <View style={[styles.content, { gap }, style]}>{children ?? null}</View>
+            <View style={[styles.content, { gap: n(gap) }, style]}>{children ?? null}</View>
         </View>
     );
 }

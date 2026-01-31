@@ -22,6 +22,7 @@ const CustomScrollView = <T,>({
     const [contentHeight, setContentHeight] = useState<number>(0);
     const [scrollViewHeight, setScrollViewHeight] = useState<number>(0);
     const scrollY = useRef(new Animated.Value(0)).current;
+    const zeroValue = useRef(new Animated.Value(0)).current;
 
     const scrollIndicatorHeight =
         scrollViewHeight > 0 &&
@@ -40,7 +41,7 @@ const CustomScrollView = <T,>({
                 outputRange: [0, scrollViewHeight - scrollIndicatorHeight],
                 extrapolate: "clamp",
             })
-            : new Animated.Value(0);
+            : zeroValue;
 
     const handleScroll = Animated.event(
         [{ nativeEvent: { contentOffset: { y: scrollY } } }],
