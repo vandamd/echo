@@ -8,7 +8,7 @@ import { usePlayback } from "@/features/playback/contexts/PlaybackContext";
 import type { SpotifyPlaylist, SpotifyTrackSimple } from "@/shared/types/spotify";
 import { StyledText, ContentContainer, CustomScrollView, TrackListItem, ListFooter, FallbackImage } from "@/shared/components";
 import { MaterialIcons } from "@expo/vector-icons";
-import { log, logError } from "@/shared/utils";
+import { log, logError, n } from "@/shared/utils";
 import { getCachedPlaylistDetail, saveCachedPlaylistDetail } from "@/features/library/utils/cache";
 import { usePreventDoubleTap, useNetworkState } from "@/shared/hooks";
 import { detailScreenStyles } from "@/shared/styles/detailScreen";
@@ -247,10 +247,10 @@ export default function PlaylistDetailScreen() {
     return (
         <ContentContainer
             headerTitle={displayName}
-            style={{ paddingHorizontal: 20 }}
+            style={{ paddingHorizontal: n(20) }}
             onTitlePress={handleTitlePress}
         >
-            <View style={{ paddingBottom: 20 }}>
+            <View style={{ paddingBottom: n(20) }}>
                 <CustomScrollView
                     ListHeaderComponent={
                         hideDetailCovers ? null : (

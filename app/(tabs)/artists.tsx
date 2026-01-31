@@ -9,6 +9,7 @@ import type { SpotifyArtist } from "@/shared/types/spotify";
 import { StyledText, ContentContainer, CustomScrollView, MediaListItem } from "@/shared/components";
 import { useRouter } from "expo-router";
 import { useNetworkState, usePreventDoubleTap } from "@/shared/hooks";
+import { n } from "@/shared/utils";
 import { tabScreenStyles as styles } from "@/shared/styles/detailScreen";
 
 export default function ArtistsScreen() {
@@ -73,7 +74,7 @@ export default function ArtistsScreen() {
                 placeholderIcon="person"
                 disabled={isDisabled}
                 onPress={() => handleArtistPress(item, isDisabled)}
-                imageStyle={{ borderRadius: 100 }}
+                imageStyle={{ borderRadius: n(100) }}
             />
         );
     };
@@ -106,7 +107,7 @@ export default function ArtistsScreen() {
             <ContentContainer
                 headerTitle="Artists"
                 hideBackButton={true}
-                style={{ paddingHorizontal: 20 }}
+                style={{ paddingHorizontal: n(20) }}
                 headerIcon="multitrack-audio"
                 headerIconPress={handlePlayingPress}
                 headerIconShowLength={1}
@@ -138,7 +139,7 @@ export default function ArtistsScreen() {
         <ContentContainer
             headerTitle="Artists"
             hideBackButton={true}
-            style={{ paddingHorizontal: 20 }}
+            style={{ paddingHorizontal: n(20) }}
             headerIcon="multitrack-audio"
             headerIconPress={handlePlayingPress}
             headerIconShowLength={1}
@@ -149,7 +150,7 @@ export default function ArtistsScreen() {
                 keyExtractor={(item) => item.id}
                 style={styles.list}
                 contentContainerStyle={styles.listContentContainer}
-                ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+                ItemSeparatorComponent={() => <View style={{ height: n(8) }} />}
                 overScrollMode={"never"}
                 onEndReached={handleLoadMore}
                 onEndReachedThreshold={2}

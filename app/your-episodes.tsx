@@ -6,7 +6,7 @@ import { useSpotifyLibrary } from "@/features/library/contexts/LibraryContext";
 import { usePlayback } from "@/features/playback/contexts/PlaybackContext";
 import type { SpotifySavedEpisode } from "@/shared/types/spotify";
 import { StyledText, ContentContainer, CustomScrollView, ListFooter, MediaListItem } from "@/shared/components";
-import { formatDuration, getLargestImage } from "@/shared/utils";
+import { formatDuration, getLargestImage, n } from "@/shared/utils";
 import { usePreventDoubleTap, useNetworkState } from "@/shared/hooks";
 import { tabScreenStyles as styles } from "@/shared/styles/detailScreen";
 
@@ -107,7 +107,7 @@ export default function YourEpisodesScreen() {
     return (
         <ContentContainer
             headerTitle="Your Episodes"
-            style={{ paddingHorizontal: 20, paddingBottom: 20 }}
+            style={{ paddingHorizontal: n(20), paddingBottom: n(20) }}
         >
             <CustomScrollView
                 style={styles.list}
@@ -116,7 +116,7 @@ export default function YourEpisodesScreen() {
                 renderItem={renderEpisodeItem}
                 keyExtractor={(item) => item.episode.id}
                 overScrollMode="never"
-                ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+                ItemSeparatorComponent={() => <View style={{ height: n(8) }} />}
                 onEndReached={() => {
                     if (savedEpisodesNextUrl && !isLoadingMoreSavedEpisodes && isOnline) {
                         fetchMoreSavedEpisodes();

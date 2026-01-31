@@ -10,6 +10,7 @@ import { StyledText, ContentContainer, CustomScrollView, MediaListItem } from "@
 import { useRouter, useFocusEffect } from "expo-router";
 import { log, logError } from "@/shared/utils/logger";
 import { getLargestImage } from "@/shared/utils/formatters";
+import { n } from "@/shared/utils";
 import {
     refreshFollowedPodcastsFromCache,
     isShowCached,
@@ -184,7 +185,7 @@ export default function PodcastsScreen() {
 
     const renderFooter = () => {
         if (!isLoadingMorePodcasts) return null;
-        return <View style={{ paddingVertical: 20 }} />;
+        return <View style={{ paddingVertical: n(20) }} />;
     };
 
     const handlePlayingPress = usePreventDoubleTap(() => {
@@ -197,7 +198,7 @@ export default function PodcastsScreen() {
             <ContentContainer
                 headerTitle="Podcasts"
                 hideBackButton={true}
-                style={{ paddingHorizontal: 20 }}
+                style={{ paddingHorizontal: n(20) }}
                 headerIcon="multitrack-audio"
                 headerIconPress={handlePlayingPress}
                 headerIconShowLength={1}
@@ -208,7 +209,7 @@ export default function PodcastsScreen() {
                     keyExtractor={(item) => item.show.id}
                     style={styles.list}
                     contentContainerStyle={styles.listContentContainer}
-                    ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+                    ItemSeparatorComponent={() => <View style={{ height: n(8) }} />}
                     overScrollMode="never"
                     refreshControl={
                         <RefreshControl
@@ -231,7 +232,7 @@ export default function PodcastsScreen() {
             headerIcon="multitrack-audio"
             headerIconPress={handlePlayingPress}
             headerIconShowLength={1}
-            style={{ paddingHorizontal: 20 }}
+            style={{ paddingHorizontal: n(20) }}
         >
             <CustomScrollView
                 style={styles.list}
@@ -249,7 +250,7 @@ export default function PodcastsScreen() {
                 renderItem={renderShowItem}
                 keyExtractor={(item) => item.show.id}
                 overScrollMode="never"
-                ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+                ItemSeparatorComponent={() => <View style={{ height: n(8) }} />}
                 onEndReached={() => {
                     if (podcastsNextUrl && !isLoadingMorePodcasts) {
                         fetchMorePodcasts();

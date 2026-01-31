@@ -9,6 +9,7 @@ import type { SpotifyPlaylist } from "@/shared/types/spotify";
 import { StyledText, ContentContainer, CustomScrollView, MediaListItem } from "@/shared/components";
 import { useRouter, useFocusEffect } from "expo-router";
 import { logError, log } from "@/shared/utils/logger";
+import { n } from "@/shared/utils";
 import { refreshPlaylistsFromCache, isPlaylistCached } from "@/features/library/utils/cache";
 import { useNetworkState, usePreventDoubleTap } from "@/shared/hooks";
 import { tabScreenStyles as styles } from "@/shared/styles/detailScreen";
@@ -221,7 +222,7 @@ export default function PlaylistsScreen() {
 
     const renderFooter = () => {
         if (!isLoadingMorePlaylists) return null;
-        return <View style={{ paddingVertical: 20 }}></View>;
+        return <View style={{ paddingVertical: n(20) }}></View>;
     };
 
     if (!sortedPlaylists || sortedPlaylists.length === 0) {
@@ -230,7 +231,7 @@ export default function PlaylistsScreen() {
             <ContentContainer
                 headerTitle="Playlists"
                 hideBackButton={true}
-                style={{ paddingHorizontal: 20 }}
+                style={{ paddingHorizontal: n(20) }}
                 headerIcon="multitrack-audio"
                 headerIconPress={handlePlayingPress}
                 headerIconShowLength={1}
@@ -241,7 +242,7 @@ export default function PlaylistsScreen() {
                     keyExtractor={(item) => item.id}
                     style={styles.list}
                     contentContainerStyle={styles.listContentContainer}
-                    ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+                    ItemSeparatorComponent={() => <View style={{ height: n(8) }} />}
                     overScrollMode={"never"}
                     refreshControl={
                         <RefreshControl
@@ -261,7 +262,7 @@ export default function PlaylistsScreen() {
         <ContentContainer
             headerTitle="Playlists"
             hideBackButton={true}
-            style={{ paddingHorizontal: 20 }}
+            style={{ paddingHorizontal: n(20) }}
             headerIcon="multitrack-audio"
             headerIconPress={handlePlayingPress}
             headerIconShowLength={1}
@@ -272,7 +273,7 @@ export default function PlaylistsScreen() {
                 keyExtractor={(item) => item.id}
                 style={styles.list}
                 contentContainerStyle={styles.listContentContainer}
-                ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+                ItemSeparatorComponent={() => <View style={{ height: n(8) }} />}
                 overScrollMode={"never"}
                 onEndReached={handleLoadMore}
                 onEndReachedThreshold={2}

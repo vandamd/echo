@@ -6,6 +6,7 @@ import { useRouter } from "expo-router";
 import { StyledButton } from "@/shared/components/StyledButton";
 import { ToggleSwitch } from "@/shared/components/ToggleSwitch";
 import { useSettings } from "@/features/settings";
+import { n } from "@/shared/utils";
 
 type SettingsItem = 
     | { type: "toggle"; label: string; value: boolean; onValueChange: (value: boolean) => void }
@@ -53,13 +54,13 @@ export default function CustomiseTabsScreen() {
         <ContentContainer
             headerTitle="Customise"
             gap={0}
-            style={{ paddingRight: 20, paddingBottom: 20 }}
+            style={{ paddingRight: n(20), paddingBottom: n(20) }}
         >
             <CustomScrollView
                 data={settingsItems}
                 renderItem={renderItem}
                 keyExtractor={(_, index) => index.toString()}
-                ItemSeparatorComponent={() => <View style={{ height: 47 }} />}
+                ItemSeparatorComponent={() => <View style={{ height: n(40) }} />}
                 overScrollMode="never"
             />
         </ContentContainer>

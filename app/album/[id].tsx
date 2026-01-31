@@ -8,7 +8,7 @@ import { useSpotifyLibrary } from "@/features/library/contexts/LibraryContext";
 import { usePlayback } from "@/features/playback/contexts/PlaybackContext";
 import type { SpotifyAlbum, SpotifyTrackSimple } from "@/shared/types/spotify";
 import { StyledText, ContentContainer, CustomScrollView, TrackListItem, ListFooter, FallbackImage } from "@/shared/components";
-import { log, logError } from "@/shared/utils";
+import { log, logError, n } from "@/shared/utils";
 import { getCachedAlbumDetail, saveCachedAlbumDetail } from "@/features/library/utils/cache";
 import { usePreventDoubleTap, useSaveStatus, useNetworkState } from "@/shared/hooks";
 import { detailScreenStyles } from "@/shared/styles/detailScreen";
@@ -168,7 +168,7 @@ export default function AlbumDetailScreen() {
         return (
             <ContentContainer
                 headerTitle={albumName || "Album"}
-                style={{ paddingHorizontal: 20 }}
+                style={{ paddingHorizontal: n(20) }}
                 headerIcon={isAlbumSaved ? "remove" : "add"}
                 headerIconPress={handleToggleAlbumSave}
                 headerIconShowLength={isCheckingAlbumSaved ? 0 : 1}
@@ -198,7 +198,7 @@ export default function AlbumDetailScreen() {
         return (
             <>
                 {showDiscGap && (
-                    <View style={{ height: 40 }} />
+                    <View style={{ height: n(40) }} />
                 )}
                 <TrackListItem
                     key={track.id || index.toString()}
@@ -215,12 +215,12 @@ export default function AlbumDetailScreen() {
     return (
         <ContentContainer
             headerTitle={album.name}
-            style={{ paddingHorizontal: 20 }}
+            style={{ paddingHorizontal: n(20) }}
             headerIcon={isAlbumSaved ? "remove" : "add"}
             headerIconPress={handleToggleAlbumSave}
             headerIconShowLength={isCheckingAlbumSaved ? 0 : 1}
         >
-            <View style={{ paddingBottom: 20 }}>
+            <View style={{ paddingBottom: n(20) }}>
                 <CustomScrollView
                     ListHeaderComponent={
                         !hideDetailCovers ? (

@@ -8,7 +8,7 @@ import { useSpotifyLibrary } from "@/features/library/contexts/LibraryContext";
 import type { SpotifySavedAlbum } from "@/shared/types/spotify";
 import { StyledText, ContentContainer, CustomScrollView, MediaListItem } from "@/shared/components";
 import { useRouter, useFocusEffect } from "expo-router";
-import { log, logError, getArtistNames } from "@/shared/utils";
+import { log, logError, getArtistNames, n } from "@/shared/utils";
 import { refreshSavedAlbumsFromCache, isAlbumCached } from "@/features/library/utils/cache";
 import { useNetworkState, usePreventDoubleTap } from "@/shared/hooks";
 import { tabScreenStyles as styles } from "@/shared/styles/detailScreen";
@@ -172,7 +172,7 @@ export default function AlbumsScreen() {
             <ContentContainer
                 headerTitle="Albums"
                 hideBackButton={true}
-                style={{ paddingHorizontal: 20 }}
+                style={{ paddingHorizontal: n(20) }}
                 headerIcon="multitrack-audio"
                 headerIconPress={handlePlayingPress}
                 headerIconShowLength={1}
@@ -204,7 +204,7 @@ export default function AlbumsScreen() {
         <ContentContainer
             headerTitle="Albums"
             hideBackButton={true}
-            style={{ paddingHorizontal: 20 }}
+            style={{ paddingHorizontal: n(20) }}
             headerIcon="multitrack-audio"
             headerIconPress={handlePlayingPress}
             headerIconShowLength={1}
@@ -215,7 +215,7 @@ export default function AlbumsScreen() {
                 keyExtractor={(item) => item.album.id} // Use album id as key
                 style={styles.list}
                 contentContainerStyle={styles.listContentContainer}
-                ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+                ItemSeparatorComponent={() => <View style={{ height: n(8) }} />}
                 overScrollMode={"never"}
                 onEndReached={handleLoadMore} // Added onEndReached
                 onEndReachedThreshold={2}
