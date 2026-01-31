@@ -17,7 +17,7 @@ import { StyledText } from "@/shared/components/StyledText";
 import { FallbackImage } from "@/shared/components/FallbackImage";
 import ContentContainer from "@/shared/components/ContentContainer";
 import CustomScrollView from "@/shared/components/CustomScrollView";
-import { logError, getArtistNames } from "@/shared/utils";
+import { logError, getArtistNames, n } from "@/shared/utils";
 import { useNetworkState } from "@/shared/hooks/useNetworkState";
 import { usePreventDoubleTap } from "@/shared/hooks/usePreventDoubleTap";
 import { useSettings } from "@/features/settings";
@@ -280,10 +280,10 @@ export default function SearchResultsScreen() {
                         uri={images && images.length > 0 ? images[0].url : undefined}
                         style={[
                             styles.itemImage,
-                            { borderRadius: item.type === "artist" ? 50 : 0 }
+                            { borderRadius: item.type === "artist" ? n(50) : 0 }
                         ]}
                         placeholderText="?"
-                        placeholderIconSize={24}
+                        placeholderIconSize={n(24)}
                     />
                 )}
                 <View style={styles.textContainer}>
@@ -300,12 +300,12 @@ export default function SearchResultsScreen() {
 
     if (routeQuery === undefined) {
         return (
-            <ContentContainer headerTitle={" "} style={{ paddingHorizontal: 20 }}></ContentContainer>
+            <ContentContainer headerTitle={" "} style={{ paddingHorizontal: n(20) }}></ContentContainer>
         );
     }
 
     return (
-        <ContentContainer headerTitle={`Results for ${routeQuery ?? ""}`} style={{ paddingHorizontal: 20 }}>
+        <ContentContainer headerTitle={`Results for ${routeQuery ?? ""}`} style={{ paddingHorizontal: n(20) }}>
             {loading ? (
                 <View style={styles.centeredMessageContainer}></View>
             ) : !isOnline ? (
@@ -315,7 +315,7 @@ export default function SearchResultsScreen() {
                     </StyledText>
                 </View>
             ) : results.length > 0 ? (
-                <View style={{ paddingBottom: 20 }}>
+                <View style={{ paddingBottom: n(20) }}>
                     <CustomScrollView
                         data={results}
                         renderItem={renderItem}
@@ -325,7 +325,7 @@ export default function SearchResultsScreen() {
                         style={styles.list}
                         contentContainerStyle={styles.listContentContainer}
                         ItemSeparatorComponent={() => (
-                            <View style={{ height: 8 }} />
+                            <View style={{ height: n(8) }} />
                         )}
                         overScrollMode={"never"}
                     />
@@ -348,11 +348,11 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
-        padding: 20,
+        padding: n(20),
         width: "100%",
     },
     emptyText: {
-        fontSize: 18,
+        fontSize: n(18),
         textAlign: "center",
     },
     list: {
@@ -363,20 +363,20 @@ const styles = StyleSheet.create({
         paddingTop: 0,
     },
     itemContainer: {
-        minHeight: 50,
+        minHeight: n(50),
         flexDirection: "row",
         alignItems: "center",
         paddingVertical: 0,
     },
     itemImage: {
-        width: 50,
-        height: 50,
-        marginRight: 15,
+        width: n(50),
+        height: n(50),
+        marginRight: n(15),
     },
     placeholderImageContainer: {
-        width: 50,
-        height: 50,
-        marginRight: 15,
+        width: n(50),
+        height: n(50),
+        marginRight: n(15),
         backgroundColor: "#282828",
         justifyContent: "center",
         alignItems: "center",
@@ -386,13 +386,13 @@ const styles = StyleSheet.create({
         gap: 0,
     },
     itemName: {
-        fontSize: 22,
-        lineHeight: 24,
+        fontSize: n(22),
+        lineHeight: n(24),
         fontFamily: "PublicSans-Regular",
     },
     itemSubtitle: {
-        fontSize: 16,
-        lineHeight: 18,
+        fontSize: n(16),
+        lineHeight: n(18),
         fontFamily: "PublicSans-Regular",
     },
 });

@@ -8,6 +8,7 @@ import { HapticPressable } from "@/shared/components/HapticPressable";
 import ContentContainer from "@/shared/components/ContentContainer";
 import { MaterialIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { n } from "@/shared/utils";
 
 type SetupStep = "clientId" | "clientSecret";
 
@@ -81,7 +82,7 @@ export default function LoginScreen() {
                                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                                 }}
                             >
-                                <MaterialIcons name="clear" size={24} color={textColor} />
+                                <MaterialIcons name="clear" size={n(24)} color={textColor} />
                             </HapticPressable>
                         )}
                     </View>
@@ -120,7 +121,7 @@ export default function LoginScreen() {
                                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                             }}
                         >
-                            <MaterialIcons name="clear" size={24} color={textColor} />
+                            <MaterialIcons name="clear" size={n(24)} color={textColor} />
                         </HapticPressable>
                     )}
                 </View>
@@ -165,26 +166,26 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
     informationText: {
-        fontSize: 18,
+        fontSize: n(18),
         marginHorizontal: 0,
-        marginTop: 10,
+        marginTop: n(10),
     },
     inputContainer: {
         flexDirection: "row",
         alignItems: "center",
         width: "100%",
-        borderBottomWidth: 1,
+        borderBottomWidth: n(1),
     },
     input: {
         flex: 1,
-        fontSize: 24,
+        fontSize: n(24),
         fontFamily: "PublicSans-Regular",
-        paddingVertical: 2,
+        paddingVertical: n(2),
         textAlign: "left",
-        paddingBottom: 6,
+        paddingBottom: n(6),
     },
     clearButton: {
-        padding: 5,
+        padding: n(5),
     },
     buttonContainer: {
         width: "100%",
@@ -193,14 +194,14 @@ const styles = StyleSheet.create({
         alignItems: "center",
     },
     loginButton: {
-        paddingVertical: 15,
-        paddingHorizontal: 30,
+        paddingVertical: n(15),
+        paddingHorizontal: n(30),
         alignItems: "center",
         justifyContent: "flex-end",
-        minWidth: 200,
+        minWidth: n(200),
     },
     loginButtonText: {
-        fontSize: 40,
+        fontSize: n(40),
         textTransform: "uppercase",
     },
 });

@@ -15,6 +15,7 @@ import ContentContainer from "@/shared/components/ContentContainer";
 import { useSettings } from "@/features/settings";
 import CustomScrollView from "@/shared/components/CustomScrollView";
 import { log, logError } from "@/shared/utils/logger";
+import { n } from "@/shared/utils";
 import { usePreventDoubleTap } from "@/shared/hooks/usePreventDoubleTap";
 
 export default function AddToPlaylistScreen() {
@@ -153,14 +154,14 @@ export default function AddToPlaylistScreen() {
                         {item.owner.display_name || item.owner.id}
                     </StyledText>
                 </View>
-                <View style={{ marginRight: 15 }}>
+                <View style={{ marginRight: n(15) }}>
                     <MaterialIcons
                         name={
                             isSelected
                                 ? "radio-button-checked"
                                 : "radio-button-unchecked"
                         }
-                        size={24}
+                        size={n(24)}
                         color={invertColors ? "black" : "white"}
                     />
                 </View>
@@ -170,7 +171,7 @@ export default function AddToPlaylistScreen() {
 
     if (isLoading && !sortedPlaylists) {
         return (
-            <ContentContainer headerTitle="Add to playlist" style={{ paddingHorizontal: 20, gap: 0 }}>
+            <ContentContainer headerTitle="Add to playlist" style={{ paddingHorizontal: n(20), gap: 0 }}>
                 <View style={styles.centeredMessageContainer}></View>
             </ContentContainer>
         );
@@ -178,7 +179,7 @@ export default function AddToPlaylistScreen() {
 
     if (!sortedPlaylists || sortedPlaylists.length === 0) {
         return (
-            <ContentContainer headerTitle="Add to playlist" style={{ paddingHorizontal: 20, gap: 0 }}>
+            <ContentContainer headerTitle="Add to playlist" style={{ paddingHorizontal: n(20), gap: 0 }}>
                 <View style={styles.centeredMessageContainer}>
                     <StyledText style={styles.emptyText}>
                         No playlists found.
@@ -189,14 +190,14 @@ export default function AddToPlaylistScreen() {
     }
 
     return (
-        <ContentContainer headerTitle="Add to playlist" style={{ paddingHorizontal: 20, gap: 0 }}>
+        <ContentContainer headerTitle="Add to playlist" style={{ paddingHorizontal: n(20), gap: 0 }}>
             <CustomScrollView
                 data={sortedPlaylists}
                 renderItem={renderPlaylistItem}
                 keyExtractor={(item) => item.id}
                 style={styles.list}
                 contentContainerStyle={styles.listContentContainer}
-                ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+                ItemSeparatorComponent={() => <View style={{ height: n(8) }} />}
                 overScrollMode="never"
                 ListHeaderComponent={hideCreatePlaylist ? null : () => (
                     <HapticPressable
@@ -205,7 +206,7 @@ export default function AddToPlaylistScreen() {
                     >
                         {!hideAlbumCovers && (
                             <View style={styles.placeholderImageContainer}>
-                                <MaterialIcons name="add" size={24} color="white" />
+                                <MaterialIcons name="add" size={n(24)} color="white" />
                             </View>
                         )}
                         <View style={styles.textContainer}>
@@ -228,13 +229,13 @@ export default function AddToPlaylistScreen() {
 
 const styles = StyleSheet.create({
     doneButton: {
-        paddingVertical: 15,
+        paddingVertical: n(15),
         alignItems: "center",
         justifyContent: "center",
-        minWidth: 200,
+        minWidth: n(200),
     },
     doneButtonText: {
-        fontSize: 40,
+        fontSize: n(40),
         textTransform: "uppercase",
     },
     list: {
@@ -251,30 +252,30 @@ const styles = StyleSheet.create({
         alignItems: "center",
     },
     emptyText: {
-        fontSize: 18,
+        fontSize: n(18),
         textAlign: "center",
     },
     itemContainer: {
-        minHeight: 50,
+        minHeight: n(50),
         paddingVertical: 0,
         flexDirection: "row",
         alignItems: "center",
     },
     newPlaylistItemContainer: {
-        minHeight: 50,
-        paddingBottom: 8,
+        minHeight: n(50),
+        paddingBottom: n(8),
         flexDirection: "row",
         alignItems: "center",
     },
     playlistImage: {
-        width: 50,
-        height: 50,
-        marginRight: 15,
+        width: n(50),
+        height: n(50),
+        marginRight: n(15),
     },
     placeholderImageContainer: {
-        width: 50,
-        height: 50,
-        marginRight: 15,
+        width: n(50),
+        height: n(50),
+        marginRight: n(15),
         backgroundColor: "#282828",
         justifyContent: "center",
         alignItems: "center",
@@ -282,14 +283,14 @@ const styles = StyleSheet.create({
     textContainer: {
         flex: 1,
         gap: 0,
-        marginRight: 15,
+        marginRight: n(15),
     },
     playlistName: {
-        fontSize: 22,
-        lineHeight: 24,
+        fontSize: n(22),
+        lineHeight: n(24),
     },
     playlistOwner: {
-        fontSize: 16,
-        lineHeight: 18,
+        fontSize: n(16),
+        lineHeight: n(18),
     },
 });
