@@ -11,7 +11,7 @@ import {
 import { n } from "@/shared/utils";
 import { useSettings } from "@/features/settings";
 
-interface CustomScrollViewProps<T = any> extends FlatListProps<T> {}
+interface CustomScrollViewProps<T = unknown> extends FlatListProps<T> {}
 
 const CustomScrollView = <T,>({
     style,

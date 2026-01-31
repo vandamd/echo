@@ -8,7 +8,6 @@ import { MaterialIcons } from "@expo/vector-icons";
 
 interface ToggleSwitchGraphicProps {
 	value: boolean;
-	disabled?: boolean;
 }
 
 const CIRCLE_DIAMETER = n(9.8);
@@ -20,47 +19,44 @@ const ToggleSwitchGraphic = ({ value }: ToggleSwitchGraphicProps) => {
 	const { invertColors } = useSettings();
 	const switchColor = invertColors ? "black" : "white";
 
-	const graphicStyles = StyleSheet.create({
-		container: {
-			flexDirection: "row",
-			alignItems: "center",
-		},
-		circle: {
-			width: CIRCLE_DIAMETER,
-			height: CIRCLE_DIAMETER,
-			borderRadius: CIRCLE_DIAMETER / 2,
-			backgroundColor: switchColor,
-		},
-		hollowCircle: {
-			width: CIRCLE_DIAMETER,
-			height: CIRCLE_DIAMETER,
-			borderRadius: CIRCLE_DIAMETER / 2,
-			borderWidth: CIRCLE_BORDER,
-			borderColor: switchColor,
-		},
-		line: {
-			width: LINE_WIDTH,
-			height: LINE_HEIGHT,
-			backgroundColor: switchColor,
-		},
-	});
-
 	return (
 		<View style={graphicStyles.container}>
 			{!value ? (
 				<>
-					<View style={graphicStyles.hollowCircle} />
-					<View style={graphicStyles.line} />
+					<View style={[graphicStyles.hollowCircle, { borderColor: switchColor }]} />
+					<View style={[graphicStyles.line, { backgroundColor: switchColor }]} />
 				</>
 			) : (
 				<>
-					<View style={graphicStyles.line} />
-					<View style={graphicStyles.circle} />
+					<View style={[graphicStyles.line, { backgroundColor: switchColor }]} />
+					<View style={[graphicStyles.circle, { backgroundColor: switchColor }]} />
 				</>
 			)}
 		</View>
 	);
 };
+
+const graphicStyles = StyleSheet.create({
+	container: {
+		flexDirection: "row",
+		alignItems: "center",
+	},
+	circle: {
+		width: CIRCLE_DIAMETER,
+		height: CIRCLE_DIAMETER,
+		borderRadius: CIRCLE_DIAMETER / 2,
+	},
+	hollowCircle: {
+		width: CIRCLE_DIAMETER,
+		height: CIRCLE_DIAMETER,
+		borderRadius: CIRCLE_DIAMETER / 2,
+		borderWidth: CIRCLE_BORDER,
+	},
+	line: {
+		width: LINE_WIDTH,
+		height: LINE_HEIGHT,
+	},
+});
 
 interface ToggleSwitchProps {
 	label: string;
