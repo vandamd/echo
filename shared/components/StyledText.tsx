@@ -23,7 +23,6 @@ export function StyledText({ style, ...rest }: StyledTextProps) {
 const styles = StyleSheet.create({
     text: {
         fontFamily: "PublicSans-Regular",
-        flexShrink: 1,
     },
 });
 
