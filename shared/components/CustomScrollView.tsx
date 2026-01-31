@@ -30,7 +30,7 @@ const CustomScrollView = <T,>({
             contentHeight > scrollViewHeight
             ? Math.max(
                 (scrollViewHeight * scrollViewHeight) / contentHeight,
-                20
+                n(20)
             )
             : 0;
 
