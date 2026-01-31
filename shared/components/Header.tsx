@@ -60,12 +60,12 @@ export function Header({
 
             {onTitlePress ? (
                 <HapticPressable onPress={onTitlePress} style={styles.titlePressable}>
-                    <StyledText style={styles.title} numberOfLines={1}>
+                    <StyledText style={styles.titleText} numberOfLines={1}>
                         {headerTitle}
                     </StyledText>
                 </HapticPressable>
             ) : (
-                <StyledText style={styles.title} numberOfLines={1}>
+                <StyledText style={[styles.titleText, styles.titleMaxWidth]} numberOfLines={1}>
                     {headerTitle}
                 </StyledText>
             )}
@@ -112,10 +112,12 @@ const styles = StyleSheet.create({
     titlePressable: {
         maxWidth: "75%",
     },
-    title: {
+    titleText: {
         fontSize: n(20),
         fontFamily: "PublicSans-Regular",
         paddingTop: n(2),
+    },
+    titleMaxWidth: {
         maxWidth: "75%",
     },
 });
