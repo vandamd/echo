@@ -18,7 +18,7 @@ import { useFocusEffect, router, useLocalSearchParams } from "expo-router";
 import { HapticPressable } from "@/shared/components/HapticPressable";
 import ContentContainer from "@/shared/components/ContentContainer";
 import { useSettings } from "@/features/settings";
-import { log, logError, getArtistNames } from "@/shared/utils";
+import { log, logError, getArtistNames, n } from "@/shared/utils";
 import { usePreventDoubleTap, useNetworkState } from "@/shared/hooks";
 
 function MarqueeText({
@@ -61,7 +61,7 @@ function MarqueeText({
                     style={styles.marqueeScrollContainer}
                     duration={duration}
                     delay={delay}
-                    endPaddingWidth={25}
+                    endPaddingWidth={n(25)}
                 >
                     <StyledText style={style}>{children}</StyledText>
                 </AutoScroll>
@@ -516,7 +516,7 @@ export default function PlayingScreen() {
 
     if (!playbackState || !item) {
         return (
-            <ContentContainer headerTitle=" " style={{ paddingHorizontal: 20 }}>
+            <ContentContainer headerTitle=" " style={{ paddingHorizontal: n(20) }}>
                 <View style={styles.content}>
                     <View style={styles.mainContent}>
                         {!hidePlayingCover && (
@@ -541,16 +541,16 @@ export default function PlayingScreen() {
                             </View>
                         </View>
                         <View style={[styles.musicControls, { opacity: 0 }]}>
-                            <MaterialIcons name="shuffle" size={30} color="transparent" />
-                            <MaterialIcons name="skip-previous" size={52} color="transparent" />
-                            <MaterialIcons name="play-arrow" size={52} color="transparent" />
-                            <MaterialIcons name="skip-next" size={52} color="transparent" />
-                            <MaterialIcons name="repeat" size={30} color="transparent" />
+                            <MaterialIcons name="shuffle" size={n(30)} color="transparent" />
+                            <MaterialIcons name="skip-previous" size={n(52)} color="transparent" />
+                            <MaterialIcons name="play-arrow" size={n(52)} color="transparent" />
+                            <MaterialIcons name="skip-next" size={n(52)} color="transparent" />
+                            <MaterialIcons name="repeat" size={n(30)} color="transparent" />
                         </View>
                     </View>
                     {visibleButtonCount > 0 && (
                         <View style={[styles.musicControlsExtra, { opacity: 0 }]}>
-                            <MaterialIcons name="favorite-outline" size={30} color="transparent" />
+                            <MaterialIcons name="favorite-outline" size={n(30)} color="transparent" />
                         </View>
                     )}
                 </View>
@@ -559,7 +559,7 @@ export default function PlayingScreen() {
     }
 
     return (
-        <ContentContainer headerTitle=" " style={{ paddingHorizontal: 20 }}>
+        <ContentContainer headerTitle=" " style={{ paddingHorizontal: n(20) }}>
             <View style={styles.content}>
                 <View style={styles.mainContent}>
                     {!hidePlayingCover && (
@@ -623,7 +623,7 @@ export default function PlayingScreen() {
                     <HapticPressable onPress={handleShuffleToggle}>
                         <MaterialIcons
                             name={"shuffle"}
-                            size={30}
+                            size={n(30)}
                             color={invertColors ? "black" : "white"}
                         />
                         <View
@@ -639,7 +639,7 @@ export default function PlayingScreen() {
                             <HapticPressable onPress={handleSeekBackward}>
                                 <MaterialCommunityIcons
                                     name="rewind-15"
-                                    size={44}
+                                    size={n(44)}
                                     color={invertColors ? "black" : "white"}
                                 />
                             </HapticPressable>
@@ -650,14 +650,14 @@ export default function PlayingScreen() {
                                             ? "pause"
                                             : "play-arrow"
                                     }
-                                    size={52}
+                                    size={n(52)}
                                     color={invertColors ? "black" : "white"}
                                 />
                             </HapticPressable>
                             <HapticPressable onPress={handleSeekForward}>
                                 <MaterialCommunityIcons
                                     name="fast-forward-15"
-                                    size={44}
+                                    size={n(44)}
                                     color={invertColors ? "black" : "white"}
                                 />
                             </HapticPressable>
@@ -667,7 +667,7 @@ export default function PlayingScreen() {
                             <HapticPressable onPress={handleSkipToPrevious}>
                                 <MaterialIcons
                                     name={"skip-previous"}
-                                    size={52}
+                                    size={n(52)}
                                     color={invertColors ? "black" : "white"}
                                 />
                             </HapticPressable>
@@ -678,14 +678,14 @@ export default function PlayingScreen() {
                                             ? "pause"
                                             : "play-arrow"
                                     }
-                                    size={52}
+                                    size={n(52)}
                                     color={invertColors ? "black" : "white"}
                                 />
                             </HapticPressable>
                             <HapticPressable onPress={handleSkipToNext}>
                                 <MaterialIcons
                                     name={"skip-next"}
-                                    size={52}
+                                    size={n(52)}
                                     color={invertColors ? "black" : "white"}
                                 />
                             </HapticPressable>
@@ -698,7 +698,7 @@ export default function PlayingScreen() {
                                     ? "repeat-one"
                                     : "repeat"
                             }
-                            size={30}
+                            size={n(30)}
                             color={invertColors ? "black" : "white"}
                         />
                         <View
@@ -728,7 +728,7 @@ export default function PlayingScreen() {
                                         ? "favorite"
                                         : "favorite-outline"
                                 }
-                                size={30}
+                                size={n(30)}
                                 color={invertColors ? "black" : "white"}
                             />
                         </HapticPressable>
@@ -741,7 +741,7 @@ export default function PlayingScreen() {
                         >
                             <MaterialIcons
                                 name={"devices"}
-                                size={30}
+                                size={n(30)}
                                 color={invertColors ? "black" : "white"}
                             />
                         </HapticPressable>
@@ -756,7 +756,7 @@ export default function PlayingScreen() {
                             disabled={!isOnline || isEpisode}
                             style={(!isOnline || isEpisode) && styles.disabledButton}
                         >
-                            <MaterialIcons name="add" size={30} color={invertColors ? "black" : "white"} />
+                            <MaterialIcons name="add" size={n(30)} color={invertColors ? "black" : "white"} />
                         </HapticPressable>
                     )}
                 </View>
@@ -783,21 +783,21 @@ const styles = StyleSheet.create({
         justifyContent: "center",
     },
     albumArt: {
-        width: 200,
-        height: 200,
-        marginBottom: 20,
+        width: n(200),
+        height: n(200),
+        marginBottom: n(20),
     },
     placeholderImageContainer: {
-        width: 200,
-        height: 200,
+        width: n(200),
+        height: n(200),
         backgroundColor: "#282828",
         justifyContent: "center",
         alignItems: "center",
-        marginBottom: 20,
+        marginBottom: n(20),
     },
     placeholderImageContainerNoGap: {
-        width: 200,
-        height: 200,
+        width: n(200),
+        height: n(200),
         backgroundColor: "#282828",
         justifyContent: "center",
         alignItems: "center",
@@ -805,22 +805,22 @@ const styles = StyleSheet.create({
     trackInfoContainer: {
         alignItems: "center",
         width: "90%",
-        marginBottom: 20,
+        marginBottom: n(20),
     },
     trackName: {
-        fontSize: 22,
-        lineHeight: 24,
+        fontSize: n(22),
+        lineHeight: n(24),
         textAlign: "center",
     },
     artistName: {
-        fontSize: 14,
-        lineHeight: 16,
+        fontSize: n(14),
+        lineHeight: n(16),
         textAlign: "center",
     },
     emptyText: {
-        fontSize: 18,
+        fontSize: n(18),
         textAlign: "center",
-        marginTop: 20,
+        marginTop: n(20),
     },
     timeIndicatorContainer: {
         width: "100%",
@@ -830,52 +830,52 @@ const styles = StyleSheet.create({
         width: "90%",
     },
     progressBarBackground: {
-        height: 2,
+        height: n(2),
         width: "100%",
         overflow: "visible",
-        marginBottom: 3,
+        marginBottom: n(3),
     },
     progressBarForeground: {
-        height: 6,
+        height: n(6),
         position: "absolute",
-        top: -2,
+        top: n(-2),
     },
     progressBarInfo: {
         flexDirection: "row",
         width: "90%",
         alignItems: "center",
         justifyContent: "space-between",
-        marginBottom: 6,
+        marginBottom: n(6),
     },
     musicControls: {
         flexDirection: "row",
         width: "92%",
         alignItems: "center",
         justifyContent: "space-between",
-        paddingBottom: 20,
+        paddingBottom: n(20),
     },
     musicControlsExtra: {
         flexDirection: "row",
         width: "92%",
         alignItems: "center",
         justifyContent: "space-between",
-        paddingBottom: 20,
+        paddingBottom: n(20),
     },
     musicControlsExtraCentered: {
         justifyContent: "center",
     },
     shuffleIndicator: {
-        height: 1,
+        height: n(1),
         width: "100%",
         overflow: "visible",
     },
     activeShuffleIndicator: {
-        height: 1,
+        height: n(1),
         width: "100%",
         overflow: "visible",
     },
     timeText: {
-        fontSize: 12,
+        fontSize: n(12),
     },
     disabledButton: {
         opacity: 0.3,
