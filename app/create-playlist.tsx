@@ -9,6 +9,7 @@ import * as Haptics from "expo-haptics";
 import { MaterialIcons } from "@expo/vector-icons";
 import { HapticPressable } from "@/shared/components/HapticPressable";
 import { log, logError } from "@/shared/utils/logger";
+import { n } from "@/shared/utils";
 
 export default function NamePlaylistScreen() {
 	const [playlistName, setPlaylistName] = useState("");
@@ -116,7 +117,7 @@ export default function NamePlaylistScreen() {
 					>
 						<MaterialIcons
 							name="clear"
-							size={24}
+							size={n(24)}
 							color={invertColors ? "black" : "white"}
 						/>
 					</HapticPressable>
@@ -133,18 +134,18 @@ const styles = StyleSheet.create({
 		flexDirection: "row",
 		alignItems: "center",
 		width: "100%",
-		borderBottomWidth: 1,
+		borderBottomWidth: n(1),
 	},
 	input: {
 		flex: 1,
-		fontSize: 24,
+		fontSize: n(24),
 		fontFamily: "PublicSans-Regular",
-		paddingVertical: 2,
+		paddingVertical: n(2),
 		textAlign: "left",
-		paddingBottom: 6,
+		paddingBottom: n(6),
 	},
 	clearButton: {
-		padding: 5,
+		padding: n(5),
 	},
 });
 

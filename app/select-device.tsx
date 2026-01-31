@@ -9,6 +9,7 @@ import { router } from "expo-router";
 import ContentContainer from "@/shared/components/ContentContainer";
 import CustomScrollView from "@/shared/components/CustomScrollView";
 import { logError } from "@/shared/utils/logger";
+import { n } from "@/shared/utils";
 
 export default function SelectDeviceScreen() {
     const { ensureValidToken } = useAuth();
@@ -106,10 +107,10 @@ const styles = StyleSheet.create({
     itemContainer: {
         flexDirection: "row",
         alignItems: "center",
-        paddingBottom: 46,
+        paddingBottom: n(46),
     },
     deviceName: {
-        fontSize: 30,
+        fontSize: n(30),
     },
     activeDeviceText: {
         textDecorationLine: "underline",

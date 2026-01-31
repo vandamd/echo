@@ -6,7 +6,7 @@ import { useSpotifyLibrary } from "@/features/library/contexts/LibraryContext";
 import { usePlayback } from "@/features/playback/contexts/PlaybackContext";
 import type { SpotifyShow, SpotifyEpisode } from "@/shared/types/spotify";
 import { StyledText, HapticPressable, ContentContainer, CustomScrollView, ListFooter, FallbackImage } from "@/shared/components";
-import { log, logError, formatDuration, getLargestImage } from "@/shared/utils";
+import { log, logError, formatDuration, getLargestImage , n } from "@/shared/utils";
 import { getCachedShowDetail, saveCachedShowDetail } from "@/features/library/utils/cache";
 import { usePreventDoubleTap, useSaveStatus, useNetworkState } from "@/shared/hooks";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -210,7 +210,7 @@ export default function PodcastDetailScreen() {
                             name="check-circle"
                             size={16}
                             color="#ffffff"
-                            style={{ marginTop: 6 }}
+                            style={{ marginTop: n(6) }}
                         />
                     )}
                     <StyledText style={styles.episodeName} numberOfLines={1}>
@@ -249,12 +249,12 @@ export default function PodcastDetailScreen() {
     return (
         <ContentContainer
             headerTitle={displayName}
-            style={{ paddingHorizontal: 20 }}
+            style={{ paddingHorizontal: n(20) }}
             headerIcon={isShowFollowed ? "remove" : "add"}
             headerIconPress={handleToggleFollowShow}
             headerIconShowLength={isCheckingFollowed ? 0 : 1}
         >
-            <View style={{ paddingBottom: 20 }}>
+            <View style={{ paddingBottom: n(20) }}>
                 <CustomScrollView
                     ListHeaderComponent={
                         hideDetailCovers ? null : (
@@ -295,7 +295,7 @@ export default function PodcastDetailScreen() {
 
 const styles = StyleSheet.create({
     placeholderText: {
-        fontSize: 64,
+        fontSize: n(64),
     },
     episodeItemContainer: {
         flexDirection: "row",
@@ -305,13 +305,13 @@ const styles = StyleSheet.create({
     },
     episodeName: {
         flex: 1,
-        fontSize: 26,
-        paddingRight: 10,
+        fontSize: n(26),
+        paddingRight: n(10),
     },
     episodeMeta: {
-        fontSize: 16,
-        lineHeight: 18,
-        paddingBottom: 6,
+        fontSize: n(16),
+        lineHeight: n(18),
+        paddingBottom: n(6),
     },
     episodeInfoContainer: {
         flex: 1,
@@ -320,7 +320,7 @@ const styles = StyleSheet.create({
     titleRow: {
         flexDirection: "row",
         alignItems: "center",
-        gap: 6,
-        marginBottom: 4,
+        gap: n(6),
+        marginBottom: n(4),
     },
 });
