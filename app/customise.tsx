@@ -60,7 +60,7 @@ export default function CustomiseTabsScreen() {
                 data={settingsItems}
                 renderItem={renderItem}
                 keyExtractor={(_, index) => index.toString()}
-                ItemSeparatorComponent={() => <View style={{ height: n(40) }} />}
+                ItemSeparatorComponent={() => <View style={{ height: n(47) }} />}
                 overScrollMode="never"
             />
         </ContentContainer>
