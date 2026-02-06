@@ -22,6 +22,7 @@ import type {
   SpotifyShow,
 } from "@/shared/types/spotify";
 import { log, logError } from "@/shared/utils/logger";
+import { normalizePlaylist } from "@/shared/utils/normalize-playlist";
 
 export const loadCachedData = async () => {
   try {
@@ -290,7 +291,9 @@ export const getCachedPlaylistDetail = async (
     const key = `${PLAYLIST_DETAIL_KEY_PREFIX}${playlistId}`;
     const cachedPlaylist = await AsyncStorage.getItem(key);
     if (cachedPlaylist) {
-      const parsedPlaylist = JSON.parse(cachedPlaylist);
+      const parsedPlaylist = normalizePlaylist(
+        JSON.parse(cachedPlaylist) as Record<string, unknown>
+      );
       log(`Cache: Retrieved cached playlist detail for ${playlistId}`);
       return parsedPlaylist;
     }

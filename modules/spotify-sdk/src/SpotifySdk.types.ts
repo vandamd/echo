@@ -139,7 +139,6 @@ export interface SpotifyArtist {
     total: number;
   };
   genres?: string[];
-  popularity?: number;
 }
 
 export interface SpotifyListItem {

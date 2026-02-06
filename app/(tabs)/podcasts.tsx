@@ -162,7 +162,7 @@ export default function PodcastsScreen() {
         onPress={() => handleShowPress(item, isUncached)}
         placeholderIcon="mic"
         primaryText={item.show.name}
-        secondaryText={item.show.publisher}
+        secondaryText={item.show.publisher ?? ""}
       />
     );
   };

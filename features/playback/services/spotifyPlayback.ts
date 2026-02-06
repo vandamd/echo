@@ -281,7 +281,6 @@ export const getPlaybackState =
             uri: playerState.track.artist.uri,
           },
         ],
-        available_markets: [],
         disc_number: 1,
         duration_ms: playerState.track.duration,
         explicit: false,
@@ -297,7 +296,6 @@ export const getPlaybackState =
         album: {
           album_type: "album",
           total_tracks: 1,
-          available_markets: [],
           external_urls: { spotify: "" },
           href: "",
           id: albumId,

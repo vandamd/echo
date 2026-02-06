@@ -84,8 +84,9 @@ export const apiPut = (url: string, body?: unknown): Promise<null> =>
     body: body ? JSON.stringify(body) : undefined,
   });
 
-export const apiDelete = (url: string): Promise<null> =>
+export const apiDelete = (url: string, body?: unknown): Promise<null> =>
   apiFetch(url, {
     method: "DELETE",
     headers: { "Content-Type": "application/json" },
+    body: body ? JSON.stringify(body) : undefined,
   });

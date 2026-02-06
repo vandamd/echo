@@ -68,7 +68,7 @@ export default function PlaylistFormScreen() {
           return;
         }
         const result = await apiPost(
-          `https://api.spotify.com/v1/users/${user.id}/playlists`,
+          "https://api.spotify.com/v1/me/playlists",
           { name: playlistName, public: false }
         );
         ok = result !== null;

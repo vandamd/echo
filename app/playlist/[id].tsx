@@ -14,6 +14,7 @@ import type {
 } from "@/shared/types/spotify";
 import { log, logError } from "@/shared/utils";
 import { apiGet } from "@/shared/utils/api-client";
+import { normalizePlaylist } from "@/shared/utils/normalize-playlist";
 
 export default function PlaylistDetailScreen() {
   const { id, playlistString, playlistName } = useLocalSearchParams<{
@@ -30,7 +31,9 @@ export default function PlaylistDetailScreen() {
       return null;
     }
     try {
-      return JSON.parse(playlistString) as SpotifyPlaylistFull;
+      return normalizePlaylist(
+        JSON.parse(playlistString) as Record<string, unknown>
+      );
     } catch {
       return null;
     }
@@ -65,13 +68,13 @@ export default function PlaylistDetailScreen() {
       return;
     }
 
-    const hasInitialData = !!(initialPlaylist as SpotifyPlaylistFull)?.tracks
+    const hasInitialData = !!(initialPlaylist as SpotifyPlaylistFull)?.items
       ?.items;
 
     if (!hasInitialData) {
       try {
         const cachedPlaylist = await getCachedPlaylistDetail(id);
-        if (cachedPlaylist?.tracks?.items) {
+        if (cachedPlaylist?.items?.items) {
           log("Playlist details: Displaying cached data");
           setPlaylist(cachedPlaylist);
         }
@@ -93,9 +96,10 @@ export default function PlaylistDetailScreen() {
     }
 
     try {
-      const data = await apiGet<SpotifyPlaylistFull>(
+      const raw = await apiGet<Record<string, unknown>>(
         `https://api.spotify.com/v1/playlists/${id}`
       );
+      const data = raw ? normalizePlaylist(raw) : null;
       if (data) {
         log("Playlist details: Fetched fresh data from API");
         setPlaylist(data);
@@ -120,7 +124,7 @@ export default function PlaylistDetailScreen() {
   );
 
   const loadMoreTracks = useCallback(async () => {
-    if (!playlist?.tracks?.next || isLoadingMoreTracks) {
+    if (!playlist?.items?.next || isLoadingMoreTracks) {
       return;
     }
     setIsLoadingMoreTracks(true);
@@ -128,17 +132,17 @@ export default function PlaylistDetailScreen() {
       const data = await apiGet<{
         items: SpotifyPlaylistTrack[];
         next: string | null;
-      }>(playlist.tracks.next);
+      }>(playlist.items.next);
       if (data) {
         setPlaylist((prevPlaylist) => {
-          if (!prevPlaylist?.tracks) {
+          if (!prevPlaylist?.items) {
             return prevPlaylist;
           }
           return {
             ...prevPlaylist,
-            tracks: {
-              ...prevPlaylist.tracks,
-              items: [...prevPlaylist.tracks.items, ...data.items],
+            items: {
+              ...prevPlaylist.items,
+              items: [...prevPlaylist.items.items, ...data.items],
               next: data.next,
             },
           };
@@ -152,8 +156,8 @@ export default function PlaylistDetailScreen() {
   }, [playlist, isLoadingMoreTracks]);
 
   const handleTrackPress = usePreventDoubleTap(async (trackIndex: number) => {
-    const playlistTrack = playlist?.tracks?.items[trackIndex];
-    const track = playlistTrack?.track;
+    const playlistTrack = playlist?.items?.items[trackIndex];
+    const track = playlistTrack?.item;
     const artistName =
       track?.artists
         ?.map((a: SpotifyTrackSimple["artists"][0]) => a.name)
@@ -197,7 +201,7 @@ export default function PlaylistDetailScreen() {
     item: SpotifyPlaylistTrack;
     index: number;
   }) => {
-    const track = item.track;
+    const track = item.item;
     if (!track) {
       return null;
     }
@@ -209,20 +213,20 @@ export default function PlaylistDetailScreen() {
         key={`${track.id || "unknown"}-${index}`}
         name={track.name}
         onPress={() => handleTrackPress(index)}
-        trackNumber={(playlist?.tracks?.offset || 0) + index + 1}
+        trackNumber={(playlist?.items?.offset || 0) + index + 1}
       />
     );
   };
 
   return (
     <DetailScreen
-      data={playlist?.tracks?.items || []}
+      data={playlist?.items?.items || []}
       emptyMessage="No tracks found in this playlist."
       error={error}
       imageUrl={displayImageUrl}
       isLoadingMore={isLoadingMoreTracks}
       keyExtractor={(item, index) =>
-        `${item.track?.id || "unknown-track"}-${index}`
+        `${item.item?.id || "unknown-track"}-${index}`
       }
       onLoadMore={loadMoreTracks}
       onTitlePress={handleTitlePress}

@@ -261,7 +261,7 @@ export default function SearchResultsScreen() {
         break;
       case "podcast":
         title = item.data.name;
-        subtitle = `Podcast \u2022 ${item.data.publisher}`;
+        subtitle = `Podcast${item.data.publisher ? ` \u2022 ${item.data.publisher}` : ""}`;
         images = item.data.images;
         itemUri = item.data.uri;
         break;

@@ -60,7 +60,9 @@ export const usePodcastsStore = create<PodcastsState>()((set, get) => ({
 
   followPodcast: async (showId: string) => {
     try {
-      await apiPut(`https://api.spotify.com/v1/me/shows?ids=${showId}`);
+      await apiPut("https://api.spotify.com/v1/me/library", {
+        uris: [`spotify:show:${showId}`],
+      });
       const showData = await apiGet<SpotifyShow>(
         `https://api.spotify.com/v1/shows/${showId}`
       );
@@ -90,7 +92,9 @@ export const usePodcastsStore = create<PodcastsState>()((set, get) => ({
 
   unfollowPodcast: async (showId: string) => {
     try {
-      await apiDelete(`https://api.spotify.com/v1/me/shows?ids=${showId}`);
+      await apiDelete("https://api.spotify.com/v1/me/library", {
+        uris: [`spotify:show:${showId}`],
+      });
       const cachedShows = await AsyncStorage.getItem(PODCASTS_KEY);
       if (cachedShows) {
         const parsedShows: SpotifySavedShow[] = JSON.parse(cachedShows);
