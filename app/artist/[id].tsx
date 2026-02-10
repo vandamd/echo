@@ -347,7 +347,9 @@ export default function ArtistDetailScreen() {
   return (
     <DetailScreen
       data={artistDetailList}
-      emptyMessage="No tracks or albums found for this artist."
+      emptyMessage={
+        artist ? "No tracks or albums found for this artist." : undefined
+      }
       error={error}
       headerIcon={isFollowingArtist ? "remove" : "add"}
       headerIconPress={handleToggleFollowArtist}

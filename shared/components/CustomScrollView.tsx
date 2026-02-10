@@ -1,7 +1,6 @@
 import { useRef, useState } from "react";
 import {
   Animated,
-  FlatList,
   type FlatListProps,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
@@ -16,6 +15,9 @@ interface CustomScrollViewProps<T = unknown> extends FlatListProps<T> {}
 const CustomScrollView = <T,>({
   style,
   contentContainerStyle,
+  onScroll: onScrollProp,
+  onContentSizeChange: onContentSizeChangeProp,
+  onLayout: onLayoutProp,
   ...rest
 }: CustomScrollViewProps<T>) => {
   const { invertColors } = useSettings();
@@ -43,45 +45,42 @@ const CustomScrollView = <T,>({
   const handleScroll = Animated.event(
     [{ nativeEvent: { contentOffset: { y: scrollY } } }],
     {
-      useNativeDriver: false,
+      useNativeDriver: true,
       listener: (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-        if (rest.onScroll) {
-          rest.onScroll(event);
-        }
+        onScrollProp?.(event as never);
       },
     }
   );
 
   return (
-    <View style={styles.container}>
-      <FlatList
+    <View
+      onLayout={(event) => {
+        setScrollViewHeight(event.nativeEvent.layout.height);
+      }}
+      style={styles.container}
+    >
+      <Animated.FlatList
+        {...(rest as FlatListProps<unknown>)}
         contentContainerStyle={[{ flexGrow: 1 }, contentContainerStyle]}
-        onContentSizeChange={(width, height) => {
+        onContentSizeChange={(width: number, height: number) => {
           setContentHeight(height);
-          if (rest.onContentSizeChange) {
-            rest.onContentSizeChange(width, height);
-          }
+          onContentSizeChangeProp?.(width, height);
         }}
-        onLayout={(event) => {
-          const { height } = event.nativeEvent.layout;
-          setScrollViewHeight(height);
-          if (rest.onLayout) {
-            rest.onLayout(event);
-          }
-        }}
+        onLayout={onLayoutProp}
         onScroll={handleScroll}
         overScrollMode="never"
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
         style={[{ width: "100%" }, style]}
-        {...rest}
       />
       {scrollIndicatorHeight > 0 && (
         <View
           style={[
             styles.scrollIndicatorTrack,
-            { transform: [{ translateX: n(1) }] },
-            { backgroundColor: invertColors ? "black" : "white" },
+            {
+              transform: [{ translateX: n(1) }],
+              backgroundColor: invertColors ? "black" : "white",
+            },
           ]}
         >
           <Animated.View
