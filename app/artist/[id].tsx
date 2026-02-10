@@ -78,6 +78,8 @@ export default function ArtistDetailScreen() {
   const [albums, setAlbums] = useState<SpotifyAlbumSimple[] | null>(null);
   const [albumsNextUrl, setAlbumsNextUrl] = useState<string | null>(null);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [hasConfirmedContent, setHasConfirmedContent] = useState(false);
 
   const artist = fetchedArtist ?? initialArtist;
   const displayName = artist?.name ?? artistName ?? "Artist";
@@ -116,24 +118,29 @@ export default function ArtistDetailScreen() {
   };
 
   useEffect(() => {
+    setHasConfirmedContent(false);
+
     if (!id) {
       setError("Artist ID is missing.");
+      setIsInitialLoading(false);
       return;
     }
 
-    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: data fetching with cache fallback
+    if (!isOnline) {
+      if (!initialArtist) {
+        setError(
+          "No cached data available. Connect to the internet to load this artist."
+        );
+      }
+      setIsInitialLoading(false);
+      return;
+    }
+
+    setIsInitialLoading(true);
+
     const fetchArtistDetails = async () => {
       if (initialArtist) {
         log("Artist details: Using pre-loaded artist data");
-      }
-
-      if (!isOnline) {
-        if (!initialArtist) {
-          setError(
-            "No cached data available. Connect to the internet to load this artist."
-          );
-        }
-        return;
       }
 
       try {
@@ -157,9 +164,6 @@ export default function ArtistDetailScreen() {
     };
 
     const fetchTopTracks = async () => {
-      if (!isOnline) {
-        return;
-      }
       try {
         const data = await fetchArtistTopTracks(id);
         setTopTracks(data);
@@ -169,9 +173,6 @@ export default function ArtistDetailScreen() {
     };
 
     const fetchAlbumsData = async () => {
-      if (!isOnline) {
-        return;
-      }
       try {
         const data = await fetchArtistAlbums(id);
         setAlbums(data.albums);
@@ -181,9 +182,17 @@ export default function ArtistDetailScreen() {
       }
     };
 
-    fetchArtistDetails();
-    fetchTopTracks();
-    fetchAlbumsData();
+    const fetchArtistData = async () => {
+      await Promise.allSettled([
+        fetchArtistDetails(),
+        fetchTopTracks(),
+        fetchAlbumsData(),
+      ]);
+      setHasConfirmedContent(true);
+      setIsInitialLoading(false);
+    };
+
+    fetchArtistData();
   }, [id, fetchArtistAlbums, fetchArtistTopTracks, initialArtist, isOnline]);
 
   const artistAlbums = (albums || []).filter(
@@ -348,13 +357,16 @@ export default function ArtistDetailScreen() {
     <DetailScreen
       data={artistDetailList}
       emptyMessage={
-        artist ? "No tracks or albums found for this artist." : undefined
+        hasConfirmedContent && artist
+          ? "No tracks or albums found for this artist."
+          : undefined
       }
       error={error}
       headerIcon={isFollowingArtist ? "remove" : "add"}
       headerIconPress={handleToggleFollowArtist}
       headerIconShowLength={isCheckingFollowingArtist ? 0 : 1}
       imageUrl={displayImageUrl}
+      isInitialLoading={isInitialLoading}
       isLoadingMore={isLoadingMore}
       itemSeparatorComponent={
         AlbumItemSeparator as React.ComponentType<{

@@ -19,6 +19,13 @@ import {
   normalizePlaylistItemsPage,
 } from "@/shared/utils/normalize-playlist";
 
+const hasLoadedPlaylistItems = (
+  playlist: SpotifyPlaylistFull | null
+): boolean =>
+  Array.isArray(playlist?.items?.items) &&
+  typeof playlist?.items?.limit === "number" &&
+  typeof playlist?.items?.offset === "number";
+
 export default function PlaylistDetailScreen() {
   const { id, playlistString, playlistName } = useLocalSearchParams<{
     id: string;
@@ -47,6 +54,9 @@ export default function PlaylistDetailScreen() {
   );
   const [error, setError] = useState<string | null>(null);
   const [isLoadingMoreTracks, setIsLoadingMoreTracks] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(
+    !hasLoadedPlaylistItems(initialPlaylist)
+  );
 
   const playlist = fetchedPlaylist ?? initialPlaylist;
   const displayName = playlist?.name ?? playlistName ?? "Playlist";
@@ -68,55 +78,59 @@ export default function PlaylistDetailScreen() {
   const fetchPlaylistDetails = useCallback(async () => {
     if (!id) {
       setError("Playlist ID is missing.");
+      setIsInitialLoading(false);
       return;
     }
 
-    const hasInitialData = !!(initialPlaylist as SpotifyPlaylistFull)?.items
-      ?.items;
-
-    if (!hasInitialData) {
-      try {
-        const cachedPlaylist = await getCachedPlaylistDetail(id);
-        if (cachedPlaylist?.items?.items) {
-          log("Playlist details: Displaying cached data");
-          setPlaylist(cachedPlaylist);
-        }
-      } catch (cacheError) {
-        logError("Error retrieving cached playlist:", cacheError);
-      }
-    }
-
-    if (!isOnline) {
-      setPlaylist((current) => {
-        if (!(hasInitialData || current)) {
-          setError(
-            "No cached data available. Connect to the internet to load this playlist."
-          );
-        }
-        return current;
-      });
-      return;
-    }
+    const hasInitialData = hasLoadedPlaylistItems(initialPlaylist);
 
     try {
-      const raw = await apiGet<Record<string, unknown>>(
-        `https://api.spotify.com/v1/playlists/${id}`
-      );
-      const data = raw ? normalizePlaylist(raw) : null;
-      if (data) {
-        log("Playlist details: Fetched fresh data from API");
-        setPlaylist(data);
-        await saveCachedPlaylistDetail(data);
-      } else if (!hasInitialData) {
-        throw new Error("Failed to fetch playlist details");
-      }
-    } catch (e: unknown) {
-      const errorMessage =
-        e instanceof Error ? e.message : "An unexpected error occurred.";
-      logError("Error fetching playlist details:", e);
       if (!hasInitialData) {
-        setError(errorMessage);
+        try {
+          const cachedPlaylist = await getCachedPlaylistDetail(id);
+          if (hasLoadedPlaylistItems(cachedPlaylist)) {
+            log("Playlist details: Displaying cached data");
+            setPlaylist(cachedPlaylist);
+          }
+        } catch (cacheError) {
+          logError("Error retrieving cached playlist:", cacheError);
+        }
       }
+
+      if (!isOnline) {
+        setPlaylist((current) => {
+          if (!(hasInitialData || current)) {
+            setError(
+              "No cached data available. Connect to the internet to load this playlist."
+            );
+          }
+          return current;
+        });
+        return;
+      }
+
+      try {
+        const raw = await apiGet<Record<string, unknown>>(
+          `https://api.spotify.com/v1/playlists/${id}`
+        );
+        const data = raw ? normalizePlaylist(raw) : null;
+        if (data) {
+          log("Playlist details: Fetched fresh data from API");
+          setPlaylist(data);
+          await saveCachedPlaylistDetail(data);
+        } else if (!hasInitialData) {
+          throw new Error("Failed to fetch playlist details");
+        }
+      } catch (e: unknown) {
+        const errorMessage =
+          e instanceof Error ? e.message : "An unexpected error occurred.";
+        logError("Error fetching playlist details:", e);
+        if (!hasInitialData) {
+          setError(errorMessage);
+        }
+      }
+    } finally {
+      setIsInitialLoading(false);
     }
   }, [id, initialPlaylist, isOnline]);
 
@@ -139,7 +153,7 @@ export default function PlaylistDetailScreen() {
           if (!prevPlaylist?.items) {
             return prevPlaylist;
           }
-          return {
+          const updatedPlaylist = {
             ...prevPlaylist,
             items: {
               ...prevPlaylist.items,
@@ -147,6 +161,8 @@ export default function PlaylistDetailScreen() {
               next: data.next,
             },
           };
+          saveCachedPlaylistDetail(updatedPlaylist);
+          return updatedPlaylist;
         });
       }
     } catch (e: unknown) {
@@ -225,6 +241,7 @@ export default function PlaylistDetailScreen() {
       emptyMessage="No tracks found in this playlist."
       error={error}
       imageUrl={displayImageUrl}
+      isInitialLoading={isInitialLoading}
       isLoadingMore={isLoadingMoreTracks}
       keyExtractor={(item, index) =>
         `${item.item?.id || "unknown-track"}-${index}`

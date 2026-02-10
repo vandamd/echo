@@ -26,6 +26,14 @@ interface RawPlaylistItemsPage {
   next: string | null;
 }
 
+const hasTrackEntries = (value: unknown): value is RawPlaylistItems => {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+  const candidate = value as { items?: unknown };
+  return Array.isArray(candidate.items);
+};
+
 const normalizeTrackEntries = (
   entries: RawPlaylistTrackEntry[]
 ): SpotifyPlaylistTrack[] =>
@@ -50,18 +58,18 @@ export const normalizePlaylist = (
   raw: Record<string, unknown>
 ): SpotifyPlaylistFull => {
   const data = raw as Record<string, unknown> & {
-    items?: RawPlaylistItems;
-    tracks?: RawPlaylistItems;
+    items?: unknown;
+    tracks?: unknown;
   };
 
-  if (!data.items && data.tracks) {
+  if (!data.items && hasTrackEntries(data.tracks)) {
     data.items = {
       ...data.tracks,
       items: normalizeTrackEntries(data.tracks.items ?? []),
     };
   }
 
-  if (data.items) {
+  if (hasTrackEntries(data.items)) {
     data.items = {
       ...data.items,
       items: normalizeTrackEntries(data.items.items ?? []),

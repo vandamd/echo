@@ -40,6 +40,9 @@ export default function AlbumDetailScreen() {
   const [album, setAlbum] = useState<SpotifyAlbum | null>(initialAlbum);
   const [error, setError] = useState<string | null>(null);
   const [isLoadingMoreTracks, setIsLoadingMoreTracks] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(
+    !initialAlbum?.tracks?.items
+  );
 
   const {
     isSaved: isAlbumSaved,
@@ -56,6 +59,7 @@ export default function AlbumDetailScreen() {
   useEffect(() => {
     if (!id) {
       setError("Album ID is missing.");
+      setIsInitialLoading(false);
       return;
     }
 
@@ -63,43 +67,47 @@ export default function AlbumDetailScreen() {
     const fetchAlbumDetails = async () => {
       let hasDisplayedData = !!initialAlbum?.tracks?.items;
 
-      if (!hasDisplayedData) {
-        try {
-          const cachedAlbum = await getCachedAlbumDetail(id);
-          if (cachedAlbum?.tracks?.items) {
-            log("Album details: Displaying cached data");
-            setAlbum(cachedAlbum);
-            hasDisplayedData = true;
+      try {
+        if (!hasDisplayedData) {
+          try {
+            const cachedAlbum = await getCachedAlbumDetail(id);
+            if (cachedAlbum?.tracks?.items) {
+              log("Album details: Displaying cached data");
+              setAlbum(cachedAlbum);
+              hasDisplayedData = true;
+            }
+          } catch (cacheError) {
+            logError("Error retrieving cached album:", cacheError);
           }
-        } catch (cacheError) {
-          logError("Error retrieving cached album:", cacheError);
         }
-      }
 
-      if (isOnline) {
-        try {
-          const data = await apiGet<SpotifyAlbum>(
-            `https://api.spotify.com/v1/albums/${id}`
+        if (isOnline) {
+          try {
+            const data = await apiGet<SpotifyAlbum>(
+              `https://api.spotify.com/v1/albums/${id}`
+            );
+            if (data) {
+              log("Album details: Fetched fresh data from API");
+              setAlbum(data);
+              await saveCachedAlbumDetail(data);
+            } else if (!hasDisplayedData) {
+              throw new Error("Failed to fetch album details");
+            }
+          } catch (e: unknown) {
+            const msg =
+              e instanceof Error ? e.message : "An unexpected error occurred.";
+            logError("Error fetching album details:", e);
+            if (!hasDisplayedData) {
+              setError(msg);
+            }
+          }
+        } else if (!hasDisplayedData) {
+          setError(
+            "No cached data available. Connect to the internet to load this album."
           );
-          if (data) {
-            log("Album details: Fetched fresh data from API");
-            setAlbum(data);
-            await saveCachedAlbumDetail(data);
-          } else if (!hasDisplayedData) {
-            throw new Error("Failed to fetch album details");
-          }
-        } catch (e: unknown) {
-          const msg =
-            e instanceof Error ? e.message : "An unexpected error occurred.";
-          logError("Error fetching album details:", e);
-          if (!hasDisplayedData) {
-            setError(msg);
-          }
         }
-      } else if (!hasDisplayedData) {
-        setError(
-          "No cached data available. Connect to the internet to load this album."
-        );
+      } finally {
+        setIsInitialLoading(false);
       }
     };
 
@@ -184,6 +192,7 @@ export default function AlbumDetailScreen() {
         headerIcon={isAlbumSaved ? "remove" : "add"}
         headerIconPress={handleToggleAlbumSave}
         headerIconShowLength={isCheckingAlbumSaved ? 0 : 1}
+        isInitialLoading={isInitialLoading}
         keyExtractor={(_item, index) => index.toString()}
         placeholderIcon="album"
         renderItem={() => null}
@@ -228,6 +237,7 @@ export default function AlbumDetailScreen() {
       headerIconPress={handleToggleAlbumSave}
       headerIconShowLength={isCheckingAlbumSaved ? 0 : 1}
       imageUrl={album.images?.[0]?.url}
+      isInitialLoading={isInitialLoading}
       isLoadingMore={isLoadingMoreTracks}
       keyExtractor={(item, index) => item.id || index.toString()}
       onLoadMore={loadMoreTracks}

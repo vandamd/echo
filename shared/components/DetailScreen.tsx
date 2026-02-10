@@ -23,6 +23,7 @@ interface DetailScreenProps<T> {
   onTitlePress?: () => void;
   error?: string | null;
   emptyMessage?: string;
+  isInitialLoading?: boolean;
   hideDetailCovers?: boolean;
   headerIcon?: keyof typeof MaterialIcons.glyphMap;
   headerIconPress?: () => void;
@@ -43,6 +44,7 @@ export function DetailScreen<T>({
   onTitlePress,
   error,
   emptyMessage,
+  isInitialLoading = false,
   hideDetailCovers,
   headerIcon,
   headerIconPress,
@@ -78,6 +80,9 @@ export function DetailScreen<T>({
                   {error}
                 </StyledText>
               );
+            }
+            if (isInitialLoading) {
+              return null;
             }
             if (emptyMessage && data.length === 0) {
               return (

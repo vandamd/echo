@@ -259,14 +259,13 @@ export default function PodcastDetailScreen() {
   return (
     <DetailScreen
       data={episodeItems}
-      emptyMessage={
-        isInitialLoading ? undefined : "No episodes found for this podcast."
-      }
+      emptyMessage="No episodes found for this podcast."
       error={error}
       headerIcon={isShowFollowed ? "remove" : "add"}
       headerIconPress={handleToggleFollowShow}
       headerIconShowLength={isCheckingFollowed ? 0 : 1}
       imageUrl={displayImageUrl}
+      isInitialLoading={isInitialLoading}
       isLoadingMore={isLoadingMoreEpisodes}
       keyExtractor={(item, index) => item?.id || index.toString()}
       onLoadMore={loadMoreEpisodes}
