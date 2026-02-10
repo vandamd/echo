@@ -2,13 +2,11 @@ import type { MaterialIcons } from "@expo/vector-icons";
 import type { ReactElement } from "react";
 import { View } from "react-native";
 import { useSettings } from "@/features/settings";
-import {
-  ContentContainer,
-  CustomScrollView,
-  FallbackImage,
-  ListFooter,
-  StyledText,
-} from "@/shared/components";
+import ContentContainer from "@/shared/components/ContentContainer";
+import CustomScrollView from "@/shared/components/CustomScrollView";
+import { FallbackImage } from "@/shared/components/FallbackImage";
+import { ListFooter } from "@/shared/components/ListFooter";
+import { StyledText } from "@/shared/components/StyledText";
 import { detailScreenStyles } from "@/shared/styles/detailScreen";
 import { n } from "@/shared/utils";
 
