@@ -43,11 +43,11 @@ export const useLibraryInit = () => {
     logInfo("LibraryInit: Starting initial data fetch");
 
     Promise.all([
-      usePlaylistsStore.getState().fetch(),
-      useAlbumsStore.getState().fetch(),
-      usePodcastsStore.getState().fetch(),
-      useArtistsStore.getState().fetch(),
-      useSavedTracksStore.getState().fetch(),
+      usePlaylistsStore.getState().fetch({ showRefreshing: false }),
+      useAlbumsStore.getState().fetch({ showRefreshing: false }),
+      usePodcastsStore.getState().fetch({ showRefreshing: false }),
+      useArtistsStore.getState().fetch({ showRefreshing: false }),
+      useSavedTracksStore.getState().fetch({ showRefreshing: false }),
     ]).then(() => {
       logInfo("LibraryInit: Initial data fetch completed");
     });

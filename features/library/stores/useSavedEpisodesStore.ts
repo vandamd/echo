@@ -11,7 +11,7 @@ interface SavedEpisodesState {
   nextUrl: string | null;
   isRefreshing: boolean;
   isLoadingMore: boolean;
-  fetch: () => Promise<void>;
+  fetch: (options?: { showRefreshing?: boolean }) => Promise<void>;
   fetchMore: () => Promise<void>;
   setSavedEpisodes: (savedEpisodes: SpotifySavedEpisode[] | null) => void;
   reset: () => void;
@@ -24,16 +24,24 @@ export const useSavedEpisodesStore = create<SavedEpisodesState>()(
     isRefreshing: false,
     isLoadingMore: false,
 
-    fetch: async () => {
-      set({ isRefreshing: true });
-      const data = await apiGet<SpotifySavedEpisodesResponse>(
-        "https://api.spotify.com/v1/me/episodes?limit=50&market=from_token"
-      );
-      if (data) {
-        set({ savedEpisodes: data.items, nextUrl: data.next });
-        await saveCachedData({ savedEpisodes: data.items });
+    fetch: async (options) => {
+      const showRefreshing = options?.showRefreshing ?? true;
+      if (showRefreshing) {
+        set({ isRefreshing: true });
       }
-      set({ isRefreshing: false });
+      try {
+        const data = await apiGet<SpotifySavedEpisodesResponse>(
+          "https://api.spotify.com/v1/me/episodes?limit=50&market=from_token"
+        );
+        if (data) {
+          set({ savedEpisodes: data.items, nextUrl: data.next });
+          await saveCachedData({ savedEpisodes: data.items });
+        }
+      } finally {
+        if (showRefreshing) {
+          set({ isRefreshing: false });
+        }
+      }
     },
 
     fetchMore: async () => {

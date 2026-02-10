@@ -11,7 +11,7 @@ interface SavedTracksState {
   nextUrl: string | null;
   isRefreshing: boolean;
   isLoadingMore: boolean;
-  fetch: () => Promise<void>;
+  fetch: (options?: { showRefreshing?: boolean }) => Promise<void>;
   fetchMore: () => Promise<void>;
   setSavedTracks: (savedTracks: SavedTrackObject[] | null) => void;
   reset: () => void;
@@ -23,16 +23,24 @@ export const useSavedTracksStore = create<SavedTracksState>()((set, get) => ({
   isRefreshing: false,
   isLoadingMore: false,
 
-  fetch: async () => {
-    set({ isRefreshing: true });
-    const data = await apiGet<SpotifyPaginatedResponse<SavedTrackObject>>(
-      "https://api.spotify.com/v1/me/tracks?limit=50"
-    );
-    if (data) {
-      set({ savedTracks: data.items, nextUrl: data.next });
-      await saveCachedData({ tracks: data.items });
+  fetch: async (options) => {
+    const showRefreshing = options?.showRefreshing ?? true;
+    if (showRefreshing) {
+      set({ isRefreshing: true });
     }
-    set({ isRefreshing: false });
+    try {
+      const data = await apiGet<SpotifyPaginatedResponse<SavedTrackObject>>(
+        "https://api.spotify.com/v1/me/tracks?limit=50"
+      );
+      if (data) {
+        set({ savedTracks: data.items, nextUrl: data.next });
+        await saveCachedData({ tracks: data.items });
+      }
+    } finally {
+      if (showRefreshing) {
+        set({ isRefreshing: false });
+      }
+    }
   },
 
   fetchMore: async () => {

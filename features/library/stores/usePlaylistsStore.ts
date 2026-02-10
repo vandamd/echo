@@ -12,7 +12,7 @@ interface PlaylistsState {
   nextUrl: string | null;
   isRefreshing: boolean;
   isLoadingMore: boolean;
-  fetch: () => Promise<void>;
+  fetch: (options?: { showRefreshing?: boolean }) => Promise<void>;
   fetchMore: () => Promise<void>;
   addTrackToPlaylist: (
     playlistId: string,
@@ -28,16 +28,24 @@ export const usePlaylistsStore = create<PlaylistsState>()((set, get) => ({
   isRefreshing: false,
   isLoadingMore: false,
 
-  fetch: async () => {
-    set({ isRefreshing: true });
-    const data = await apiGet<SpotifyPaginatedResponse<SpotifyPlaylist>>(
-      "https://api.spotify.com/v1/me/playlists?limit=50"
-    );
-    if (data) {
-      set({ playlists: data.items, nextUrl: data.next });
-      await saveCachedData({ playlists: data.items });
+  fetch: async (options) => {
+    const showRefreshing = options?.showRefreshing ?? true;
+    if (showRefreshing) {
+      set({ isRefreshing: true });
     }
-    set({ isRefreshing: false });
+    try {
+      const data = await apiGet<SpotifyPaginatedResponse<SpotifyPlaylist>>(
+        "https://api.spotify.com/v1/me/playlists?limit=50"
+      );
+      if (data) {
+        set({ playlists: data.items, nextUrl: data.next });
+        await saveCachedData({ playlists: data.items });
+      }
+    } finally {
+      if (showRefreshing) {
+        set({ isRefreshing: false });
+      }
+    }
   },
 
   fetchMore: async () => {

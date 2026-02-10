@@ -35,6 +35,8 @@ export function ListScreen<T>({
   refreshEnabled = true,
   headerIconPress,
 }: ListScreenProps<T>) {
+  const shouldAttachRefreshControl = data !== null;
+
   if (!data || data.length === 0) {
     return (
       <ContentContainer
@@ -56,14 +58,16 @@ export function ListScreen<T>({
           }
           overScrollMode="never"
           refreshControl={
-            <RefreshControl
-              colors={["white"]}
-              enabled={refreshEnabled && isOnline !== false}
-              onRefresh={onRefresh}
-              progressBackgroundColor="black"
-              refreshing={isRefreshing}
-              size={"large" as never}
-            />
+            shouldAttachRefreshControl ? (
+              <RefreshControl
+                colors={["white"]}
+                enabled={refreshEnabled && isOnline !== false}
+                onRefresh={onRefresh}
+                progressBackgroundColor="black"
+                refreshing={isRefreshing}
+                size={"large" as never}
+              />
+            ) : undefined
           }
           renderItem={
             renderItem as (props: {
@@ -103,14 +107,16 @@ export function ListScreen<T>({
         onEndReachedThreshold={2}
         overScrollMode="never"
         refreshControl={
-          <RefreshControl
-            colors={["white"]}
-            enabled={refreshEnabled && isOnline !== false}
-            onRefresh={onRefresh}
-            progressBackgroundColor="black"
-            refreshing={isRefreshing}
-            size={"large" as never}
-          />
+          shouldAttachRefreshControl ? (
+            <RefreshControl
+              colors={["white"]}
+              enabled={refreshEnabled && isOnline !== false}
+              onRefresh={onRefresh}
+              progressBackgroundColor="black"
+              refreshing={isRefreshing}
+              size={"large" as never}
+            />
+          ) : undefined
         }
         renderItem={
           renderItem as (props: {

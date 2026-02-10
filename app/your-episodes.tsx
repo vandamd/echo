@@ -29,6 +29,7 @@ export default function YourEpisodesScreen() {
   const fetchMoreEpisodes = useSavedEpisodesStore((s) => s.fetchMore);
   const router = useRouter();
   const { isOnline } = useNetworkState();
+  const shouldAttachRefreshControl = savedEpisodes !== null;
 
   useEffect(() => {
     if (
@@ -38,7 +39,7 @@ export default function YourEpisodesScreen() {
       !isAuthLoading &&
       !isRefreshing
     ) {
-      fetchEpisodes();
+      fetchEpisodes({ showRefreshing: false });
     }
   }, [
     accessToken,
@@ -156,13 +157,15 @@ export default function YourEpisodesScreen() {
         onEndReachedThreshold={2}
         overScrollMode="never"
         refreshControl={
-          <RefreshControl
-            colors={["white"]}
-            onRefresh={handleRefresh}
-            progressBackgroundColor={"black"}
-            refreshing={isRefreshing}
-            size={"large" as unknown as number}
-          />
+          shouldAttachRefreshControl ? (
+            <RefreshControl
+              colors={["white"]}
+              onRefresh={handleRefresh}
+              progressBackgroundColor={"black"}
+              refreshing={isRefreshing}
+              size={"large" as unknown as number}
+            />
+          ) : undefined
         }
         renderItem={renderEpisodeItem}
         style={styles.list}
