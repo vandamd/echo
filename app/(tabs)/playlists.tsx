@@ -176,7 +176,7 @@ export default function PlaylistsScreen() {
     images: [],
     owner: { display_name: "", id: "" },
     description: "",
-    tracks: { href: "", total: 0 },
+    items: { href: "", total: 0 },
     public: false,
     collaborative: false,
     uri: "",

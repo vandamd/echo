@@ -34,7 +34,7 @@ export interface SpotifyPlaylist {
   description: string | null;
   images: SpotifyImage[];
   owner: SpotifyPlaylistOwner;
-  tracks: {
+  items: {
     href: string;
     total: number;
   };
@@ -282,7 +282,7 @@ export interface SpotifyPlaylistSimple {
   owner: SpotifyPlaylistOwner;
   public: boolean | null;
   snapshot_id: string;
-  tracks: {
+  items: {
     href: string;
     total: number;
   };

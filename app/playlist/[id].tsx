@@ -14,7 +14,10 @@ import type {
 } from "@/shared/types/spotify";
 import { log, logError } from "@/shared/utils";
 import { apiGet } from "@/shared/utils/api-client";
-import { normalizePlaylist } from "@/shared/utils/normalize-playlist";
+import {
+  normalizePlaylist,
+  normalizePlaylistItemsPage,
+} from "@/shared/utils/normalize-playlist";
 
 export default function PlaylistDetailScreen() {
   const { id, playlistString, playlistName } = useLocalSearchParams<{
@@ -129,11 +132,9 @@ export default function PlaylistDetailScreen() {
     }
     setIsLoadingMoreTracks(true);
     try {
-      const data = await apiGet<{
-        items: SpotifyPlaylistTrack[];
-        next: string | null;
-      }>(playlist.items.next);
-      if (data) {
+      const raw = await apiGet<Record<string, unknown>>(playlist.items.next);
+      if (raw) {
+        const data = normalizePlaylistItemsPage(raw);
         setPlaylist((prevPlaylist) => {
           if (!prevPlaylist?.items) {
             return prevPlaylist;

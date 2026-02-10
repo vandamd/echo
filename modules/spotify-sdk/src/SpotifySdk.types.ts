@@ -43,12 +43,6 @@ export interface SpotifyAuthRequest {
 export interface SpotifyUser {
   id: string;
   displayName?: string;
-  email?: string;
-  country?: string;
-  product?: string;
-  followers?: {
-    total: number;
-  };
   images?: SpotifyImage[];
 }
 
@@ -115,7 +109,7 @@ export interface SpotifyPlaylist {
     displayName?: string;
   };
   images?: SpotifyImage[];
-  tracks: {
+  items: {
     total: number;
   };
   collaborative: boolean;
@@ -135,9 +129,6 @@ export interface SpotifyArtist {
   uri: string;
   name: string;
   images?: SpotifyImage[];
-  followers?: {
-    total: number;
-  };
   genres?: string[];
 }
 

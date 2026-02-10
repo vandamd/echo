@@ -8,7 +8,6 @@ interface RawPlaylistTrackEntry {
   added_by: SpotifyPlaylistTrack["added_by"];
   is_local: boolean;
   item?: SpotifyPlaylistTrack["item"];
-  track?: SpotifyPlaylistTrack["item"];
 }
 
 interface RawPlaylistItems {
@@ -21,41 +20,46 @@ interface RawPlaylistItems {
   total: number;
 }
 
+interface RawPlaylistItemsPage {
+  items: RawPlaylistTrackEntry[];
+  next: string | null;
+}
+
+const normalizeTrackEntries = (
+  entries: RawPlaylistTrackEntry[]
+): SpotifyPlaylistTrack[] =>
+  entries.map((entry): SpotifyPlaylistTrack => {
+    return {
+      added_at: entry.added_at,
+      added_by: entry.added_by,
+      is_local: entry.is_local,
+      item: entry.item ?? null,
+    };
+  });
+
 export const normalizePlaylist = (
   raw: Record<string, unknown>
 ): SpotifyPlaylistFull => {
   const data = raw as Record<string, unknown> & {
     items?: RawPlaylistItems;
-    tracks?: RawPlaylistItems;
   };
 
-  if (
-    !data.items &&
-    data.tracks &&
-    typeof data.tracks === "object" &&
-    "items" in data.tracks
-  ) {
-    const tracksObj = data.tracks;
-    (data as Record<string, unknown>).items = {
-      ...tracksObj,
-      items: (tracksObj.items ?? []).map((entry): SpotifyPlaylistTrack => {
-        if (!entry.item && entry.track) {
-          return {
-            added_at: entry.added_at,
-            added_by: entry.added_by,
-            is_local: entry.is_local,
-            item: entry.track,
-          };
-        }
-        return {
-          added_at: entry.added_at,
-          added_by: entry.added_by,
-          is_local: entry.is_local,
-          item: entry.item ?? null,
-        };
-      }),
+  if (data.items) {
+    data.items = {
+      ...data.items,
+      items: normalizeTrackEntries(data.items.items ?? []),
     };
   }
 
   return data as unknown as SpotifyPlaylistFull;
+};
+
+export const normalizePlaylistItemsPage = (
+  raw: Record<string, unknown>
+): { items: SpotifyPlaylistTrack[]; next: string | null } => {
+  const data = raw as unknown as RawPlaylistItemsPage;
+  return {
+    items: normalizeTrackEntries(data.items ?? []),
+    next: data.next ?? null,
+  };
 };
