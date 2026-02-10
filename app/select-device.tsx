@@ -45,11 +45,15 @@ export default function SelectDeviceScreen() {
       if (!validToken) {
         return;
       }
-      await apiPut("https://api.spotify.com/v1/me/player", {
+      const transferred = await apiPut("https://api.spotify.com/v1/me/player", {
         device_ids: [deviceId],
       });
+      if (!transferred) {
+        return;
+      }
     } catch (error) {
       logError("Error transferring playback to device:", error);
+      return;
     }
     if (router.canGoBack()) {
       router.back();

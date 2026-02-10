@@ -69,9 +69,12 @@ export const useArtistsStore = create<ArtistsState>()((set, get) => ({
 
   followArtist: async (artistId: string) => {
     try {
-      await apiPut(
+      const followed = await apiPut(
         `https://api.spotify.com/v1/me/following?type=artist&ids=${artistId}`
       );
+      if (!followed) {
+        return false;
+      }
       const artistData = await apiGet<SpotifyArtist>(
         `https://api.spotify.com/v1/artists/${artistId}`
       );
@@ -94,9 +97,12 @@ export const useArtistsStore = create<ArtistsState>()((set, get) => ({
 
   unfollowArtist: async (artistId: string) => {
     try {
-      await apiDelete(
+      const unfollowed = await apiDelete(
         `https://api.spotify.com/v1/me/following?type=artist&ids=${artistId}`
       );
+      if (!unfollowed) {
+        return false;
+      }
       const cachedArtists = await AsyncStorage.getItem(ARTISTS_KEY);
       if (cachedArtists) {
         const parsedArtists: SpotifyArtist[] = JSON.parse(cachedArtists);

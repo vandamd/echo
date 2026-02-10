@@ -8,6 +8,7 @@ interface RawPlaylistTrackEntry {
   added_by: SpotifyPlaylistTrack["added_by"];
   is_local: boolean;
   item?: SpotifyPlaylistTrack["item"];
+  track?: SpotifyPlaylistTrack["item"];
 }
 
 interface RawPlaylistItems {
@@ -29,6 +30,14 @@ const normalizeTrackEntries = (
   entries: RawPlaylistTrackEntry[]
 ): SpotifyPlaylistTrack[] =>
   entries.map((entry): SpotifyPlaylistTrack => {
+    if (!entry.item && entry.track) {
+      return {
+        added_at: entry.added_at,
+        added_by: entry.added_by,
+        is_local: entry.is_local,
+        item: entry.track,
+      };
+    }
     return {
       added_at: entry.added_at,
       added_by: entry.added_by,
@@ -42,7 +51,15 @@ export const normalizePlaylist = (
 ): SpotifyPlaylistFull => {
   const data = raw as Record<string, unknown> & {
     items?: RawPlaylistItems;
+    tracks?: RawPlaylistItems;
   };
+
+  if (!data.items && data.tracks) {
+    data.items = {
+      ...data.tracks,
+      items: normalizeTrackEntries(data.tracks.items ?? []),
+    };
+  }
 
   if (data.items) {
     data.items = {

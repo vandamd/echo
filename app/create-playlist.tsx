@@ -58,10 +58,12 @@ export default function PlaylistFormScreen() {
           logError("Rename Playlist Error: Missing playlist ID");
           return;
         }
-        await apiPut(`https://api.spotify.com/v1/playlists/${playlistId}`, {
-          name: playlistName,
-        });
-        ok = true;
+        ok = await apiPut(
+          `https://api.spotify.com/v1/playlists/${playlistId}`,
+          {
+            name: playlistName,
+          }
+        );
       } else {
         if (!user?.id) {
           logError("Create Playlist Error: Missing user ID");

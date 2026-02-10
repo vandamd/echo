@@ -77,16 +77,67 @@ export const apiPost = <T>(url: string, body?: unknown): Promise<T | null> =>
     body: body ? JSON.stringify(body) : undefined,
   });
 
-export const apiPut = (url: string, body?: unknown): Promise<null> =>
-  apiFetch(url, {
+const apiFetchOk = async (
+  url: string,
+  options?: RequestInit,
+  isRetry = false
+): Promise<boolean> => {
+  if (!(getToken && onLogout)) {
+    logError("API client not configured");
+    return false;
+  }
+
+  const token = await getToken();
+  if (!token) {
+    logError("API: No valid token available");
+    return false;
+  }
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        ...options?.headers,
+      },
+    });
+
+    if (response.ok) {
+      return true;
+    }
+
+    if (response.status === 401 && !isRetry) {
+      logWarn("API: 401 received, retrying with fresh token");
+      return apiFetchOk(url, options, true);
+    }
+
+    if (response.status === 401) {
+      logError("API: 401 after retry, logging out");
+      await onLogout();
+      return false;
+    }
+
+    const errorData = await response
+      .json()
+      .catch(() => ({ message: "Unknown error" }));
+    logError(`API: ${response.status} for ${url}`, errorData);
+    return false;
+  } catch (error) {
+    logError(`API: Network error for ${url}`, error);
+    return false;
+  }
+};
+
+export const apiPut = (url: string, body?: unknown): Promise<boolean> =>
+  apiFetchOk(url, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: body ? { "Content-Type": "application/json" } : undefined,
     body: body ? JSON.stringify(body) : undefined,
   });
 
-export const apiDelete = (url: string, body?: unknown): Promise<null> =>
-  apiFetch(url, {
+export const apiDelete = (url: string, body?: unknown): Promise<boolean> =>
+  apiFetchOk(url, {
     method: "DELETE",
-    headers: { "Content-Type": "application/json" },
+    headers: body ? { "Content-Type": "application/json" } : undefined,
     body: body ? JSON.stringify(body) : undefined,
   });

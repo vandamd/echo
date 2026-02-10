@@ -61,9 +61,13 @@ export const useAlbumsStore = create<AlbumsState>()((set, get) => ({
 
   saveAlbum: async (albumId: string) => {
     try {
-      await apiPut("https://api.spotify.com/v1/me/library", {
-        uris: [`spotify:album:${albumId}`],
-      });
+      const uri = encodeURIComponent(`spotify:album:${albumId}`);
+      const saved = await apiPut(
+        `https://api.spotify.com/v1/me/library?uris=${uri}`
+      );
+      if (!saved) {
+        return false;
+      }
       const albumData = await apiGet<SpotifyAlbum>(
         `https://api.spotify.com/v1/albums/${albumId}`
       );
@@ -90,9 +94,13 @@ export const useAlbumsStore = create<AlbumsState>()((set, get) => ({
 
   removeAlbum: async (albumId: string) => {
     try {
-      await apiDelete("https://api.spotify.com/v1/me/library", {
-        uris: [`spotify:album:${albumId}`],
-      });
+      const uri = encodeURIComponent(`spotify:album:${albumId}`);
+      const removed = await apiDelete(
+        `https://api.spotify.com/v1/me/library?uris=${uri}`
+      );
+      if (!removed) {
+        return false;
+      }
       const cachedAlbums = await AsyncStorage.getItem(ALBUMS_KEY);
       if (cachedAlbums) {
         const parsedAlbums: SpotifySavedAlbum[] = JSON.parse(cachedAlbums);
