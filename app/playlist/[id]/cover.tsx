@@ -36,16 +36,6 @@ const MAX_COVER_SIZE_BYTES = 256 * 1024;
 const SIZE_STEPS = [1000, 900, 800, 700, 600, 500, 400, 300];
 const QUALITY_STEPS = [0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2];
 
-const getBase64SizeBytes = (base64: string) => {
-  let padding = 0;
-  if (base64.endsWith("==")) {
-    padding = 2;
-  } else if (base64.endsWith("=")) {
-    padding = 1;
-  }
-  return Math.floor((base64.length * 3) / 4) - padding;
-};
-
 interface PhotoItemProps {
   item: Asset;
   isSelected: boolean;
