@@ -161,8 +161,9 @@ export default function PlaylistCoverScreen() {
   const [photos, setPhotos] = useState<Asset[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loadState, setLoadState] = useState<
-    "idle" | "loading" | "loaded" | "denied"
-  >("idle");
+    "loading" | "loaded" | "denied"
+  >("loading");
+
   const [hasMore, setHasMore] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
