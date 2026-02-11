@@ -147,7 +147,7 @@ const prepareImageForSpotify = async (asset: Asset) => {
         continue;
       }
 
-      if (getBase64SizeBytes(base64) <= MAX_COVER_SIZE_BYTES) {
+      if (base64.length <= MAX_COVER_SIZE_BYTES) {
         return base64;
       }
     }
