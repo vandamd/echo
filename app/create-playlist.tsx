@@ -31,7 +31,7 @@ export default function PlaylistFormScreen() {
     isRename ? (currentName ?? "") : ""
   );
   const router = useRouter();
-  const { user, ensureValidToken } = useAuth();
+  const { ensureValidToken } = useAuth();
   const fetchPlaylists = usePlaylistsStore((s) => s.fetch);
 
   useFocusEffect(
@@ -65,10 +65,6 @@ export default function PlaylistFormScreen() {
           }
         );
       } else {
-        if (!user?.id) {
-          logError("Create Playlist Error: Missing user ID");
-          return;
-        }
         const result = await apiPost(
           "https://api.spotify.com/v1/me/playlists",
           { name: playlistName, public: false }
