@@ -283,7 +283,7 @@ export const getCachedShowDetail = async (
 };
 
 export const saveCachedPlaylistDetail = async (
-  playlist: SpotifyPlaylistFull
+  playlist: SpotifyPlaylist | SpotifyPlaylistFull
 ) => {
   try {
     const canonicalPlaylist = parsePlaylist(playlist) ?? playlist;
@@ -299,7 +299,7 @@ export const saveCachedPlaylistDetail = async (
 
 export const getCachedPlaylistDetail = async (
   playlistId: string
-): Promise<SpotifyPlaylistFull | null> => {
+): Promise<SpotifyPlaylist | SpotifyPlaylistFull | null> => {
   try {
     const key = `${PLAYLIST_DETAIL_KEY_PREFIX}${playlistId}`;
     const cachedPlaylist = await AsyncStorage.getItem(key);

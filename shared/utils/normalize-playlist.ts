@@ -4,6 +4,8 @@ import type {
   SpotifyPlaylistTrack,
 } from "@/shared/types/spotify";
 
+export type ParsedPlaylist = SpotifyPlaylist | SpotifyPlaylistFull;
+
 interface RawPlaylistTrackEntry {
   added_at: string;
   added_by: SpotifyPlaylistTrack["added_by"];
@@ -69,9 +71,7 @@ const normalizeTrackEntries = (
     };
   });
 
-const normalizePlaylist = (
-  raw: Record<string, unknown>
-): SpotifyPlaylistFull => {
+const normalizePlaylist = (raw: Record<string, unknown>): ParsedPlaylist => {
   const data = raw as Record<string, unknown> & {
     items?: unknown;
     tracks?: unknown;
@@ -91,10 +91,21 @@ const normalizePlaylist = (
     };
   }
 
-  return data as unknown as SpotifyPlaylistFull;
+  if (!isRecord(data.items) && isRecord(data.tracks)) {
+    data.items = {
+      href: typeof data.tracks.href === "string" ? data.tracks.href : "",
+      total: typeof data.tracks.total === "number" ? data.tracks.total : 0,
+    };
+  }
+
+  if (!isRecord(data.items)) {
+    data.items = { href: "", total: 0 };
+  }
+
+  return data as unknown as ParsedPlaylist;
 };
 
-export const parsePlaylist = (raw: unknown): SpotifyPlaylistFull | null => {
+export const parsePlaylist = (raw: unknown): ParsedPlaylist | null => {
   if (!isRecord(raw)) {
     return null;
   }

@@ -8,6 +8,7 @@ import { usePlayback } from "@/features/playback";
 import { DetailScreen, TrackListItem } from "@/shared/components";
 import { useNetworkState, usePreventDoubleTap } from "@/shared/hooks";
 import type {
+  SpotifyPlaylist,
   SpotifyPlaylistFull,
   SpotifyPlaylistTrack,
   SpotifyTrackSimple,
@@ -20,11 +21,23 @@ import {
 } from "@/shared/utils/normalize-playlist";
 
 const hasLoadedPlaylistItems = (
-  playlist: SpotifyPlaylistFull | null
-): boolean =>
-  Array.isArray(playlist?.items?.items) &&
-  typeof playlist?.items?.limit === "number" &&
-  typeof playlist?.items?.offset === "number";
+  playlist: SpotifyPlaylist | SpotifyPlaylistFull | null
+): playlist is SpotifyPlaylistFull => {
+  const maybeItems = playlist?.items as unknown;
+  if (!maybeItems || typeof maybeItems !== "object") {
+    return false;
+  }
+  const candidate = maybeItems as {
+    items?: unknown;
+    limit?: unknown;
+    offset?: unknown;
+  };
+  return (
+    Array.isArray(candidate.items) &&
+    typeof candidate.limit === "number" &&
+    typeof candidate.offset === "number"
+  );
+};
 
 export default function PlaylistDetailScreen() {
   const { id, playlistString, playlistName } = useLocalSearchParams<{
@@ -47,9 +60,9 @@ export default function PlaylistDetailScreen() {
     }
   }, [playlistString]);
 
-  const [fetchedPlaylist, setPlaylist] = useState<SpotifyPlaylistFull | null>(
-    null
-  );
+  const [fetchedPlaylist, setPlaylist] = useState<
+    SpotifyPlaylist | SpotifyPlaylistFull | null
+  >(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoadingMoreTracks, setIsLoadingMoreTracks] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(
@@ -57,6 +70,7 @@ export default function PlaylistDetailScreen() {
   );
 
   const playlist = fetchedPlaylist ?? initialPlaylist;
+  const loadedPlaylist = hasLoadedPlaylistItems(playlist) ? playlist : null;
   const displayName = playlist?.name ?? playlistName ?? "Playlist";
   const displayImageUrl = playlist?.images?.[0]?.url;
 
@@ -139,19 +153,19 @@ export default function PlaylistDetailScreen() {
   );
 
   const loadMoreTracks = useCallback(async () => {
-    if (!playlist?.items?.next || isLoadingMoreTracks) {
+    if (!loadedPlaylist?.items.next || isLoadingMoreTracks) {
       return;
     }
     setIsLoadingMoreTracks(true);
     try {
-      const raw = await apiGet<unknown>(playlist.items.next);
+      const raw = await apiGet<unknown>(loadedPlaylist.items.next);
       if (raw) {
         const data = parsePlaylistItemsPage(raw);
         if (!data) {
           return;
         }
         setPlaylist((prevPlaylist) => {
-          if (!prevPlaylist?.items) {
+          if (!hasLoadedPlaylistItems(prevPlaylist)) {
             return prevPlaylist;
           }
           const updatedPlaylist = {
@@ -171,10 +185,10 @@ export default function PlaylistDetailScreen() {
     } finally {
       setIsLoadingMoreTracks(false);
     }
-  }, [playlist, isLoadingMoreTracks]);
+  }, [loadedPlaylist, isLoadingMoreTracks]);
 
   const handleTrackPress = usePreventDoubleTap(async (trackIndex: number) => {
-    const playlistTrack = playlist?.items?.items[trackIndex];
+    const playlistTrack = loadedPlaylist?.items.items[trackIndex];
     const track = playlistTrack?.item;
     const artistName =
       track?.artists
@@ -231,14 +245,14 @@ export default function PlaylistDetailScreen() {
         key={`${track.id || "unknown"}-${index}`}
         name={track.name}
         onPress={() => handleTrackPress(index)}
-        trackNumber={(playlist?.items?.offset || 0) + index + 1}
+        trackNumber={(loadedPlaylist?.items.offset || 0) + index + 1}
       />
     );
   };
 
   return (
     <DetailScreen
-      data={playlist?.items?.items || []}
+      data={loadedPlaylist?.items.items || []}
       emptyMessage="No tracks found in this playlist."
       error={error}
       imageUrl={displayImageUrl}
