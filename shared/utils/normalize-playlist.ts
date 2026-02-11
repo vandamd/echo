@@ -1,4 +1,5 @@
 import type {
+  SpotifyPlaylist,
   SpotifyPlaylistFull,
   SpotifyPlaylistTrack,
 } from "@/shared/types/spotify";
@@ -24,6 +25,17 @@ interface RawPlaylistItems {
 interface RawPlaylistItemsPage {
   items: RawPlaylistTrackEntry[];
   next: string | null;
+}
+
+interface RawPlaylistSummary {
+  items?: {
+    href?: string;
+    total?: number;
+  };
+  tracks?: {
+    href?: string;
+    total?: number;
+  };
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -106,4 +118,57 @@ export const parsePlaylistItemsPage = (
     return null;
   }
   return normalizePlaylistItemsPage(raw);
+};
+
+const normalizePlaylistSummary = (
+  raw: Record<string, unknown>
+): SpotifyPlaylist => {
+  const data = raw as Record<string, unknown> & RawPlaylistSummary;
+
+  if (!isRecord(data.items) && isRecord(data.tracks)) {
+    data.items = {
+      href: typeof data.tracks.href === "string" ? data.tracks.href : "",
+      total: typeof data.tracks.total === "number" ? data.tracks.total : 0,
+    };
+  }
+
+  if (!isRecord(data.items)) {
+    data.items = { href: "", total: 0 };
+  }
+
+  return data as unknown as SpotifyPlaylist;
+};
+
+export const parsePlaylistSummary = (raw: unknown): SpotifyPlaylist | null => {
+  if (!isRecord(raw)) {
+    return null;
+  }
+  return normalizePlaylistSummary(raw);
+};
+
+export const parsePlaylists = (raw: unknown): SpotifyPlaylist[] | null => {
+  if (!Array.isArray(raw)) {
+    return null;
+  }
+  return raw
+    .map((entry) => parsePlaylistSummary(entry))
+    .filter((entry): entry is SpotifyPlaylist => entry !== null);
+};
+
+export const parsePlaylistsPage = (
+  raw: unknown
+): { items: SpotifyPlaylist[]; next: string | null } | null => {
+  if (!isRecord(raw)) {
+    return null;
+  }
+
+  const items = parsePlaylists(raw.items);
+  if (!items) {
+    return null;
+  }
+
+  return {
+    items,
+    next: typeof raw.next === "string" ? raw.next : null,
+  };
 };

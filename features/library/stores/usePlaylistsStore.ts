@@ -1,10 +1,8 @@
 import { create } from "zustand";
-import type {
-  SpotifyPaginatedResponse,
-  SpotifyPlaylist,
-} from "@/shared/types/spotify";
+import type { SpotifyPlaylist } from "@/shared/types/spotify";
 import { apiGet, apiPost } from "@/shared/utils/api-client";
 import { logError } from "@/shared/utils/logger";
+import { parsePlaylistsPage } from "@/shared/utils/normalize-playlist";
 import { saveCachedData } from "../utils/cache";
 
 interface PlaylistsState {
@@ -34,9 +32,10 @@ export const usePlaylistsStore = create<PlaylistsState>()((set, get) => ({
       set({ isRefreshing: true });
     }
     try {
-      const data = await apiGet<SpotifyPaginatedResponse<SpotifyPlaylist>>(
+      const raw = await apiGet<unknown>(
         "https://api.spotify.com/v1/me/playlists?limit=50"
       );
+      const data = raw ? parsePlaylistsPage(raw) : null;
       if (data) {
         set({ playlists: data.items, nextUrl: data.next });
         await saveCachedData({ playlists: data.items });
@@ -54,8 +53,8 @@ export const usePlaylistsStore = create<PlaylistsState>()((set, get) => ({
       return;
     }
     set({ isLoadingMore: true });
-    const data =
-      await apiGet<SpotifyPaginatedResponse<SpotifyPlaylist>>(nextUrl);
+    const raw = await apiGet<unknown>(nextUrl);
+    const data = raw ? parsePlaylistsPage(raw) : null;
     if (data) {
       set((state) => ({
         playlists: [...(state.playlists || []), ...data.items],
