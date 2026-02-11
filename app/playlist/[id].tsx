@@ -1,5 +1,6 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
+import { useAuth } from "@/features/auth";
 import {
   getCachedPlaylistDetail,
   saveCachedPlaylistDetail,
@@ -45,6 +46,7 @@ export default function PlaylistDetailScreen() {
     playlistString?: string;
     playlistName?: string;
   }>();
+  const { user } = useAuth();
   const { skipToIndex } = usePlayback();
   const router = useRouter();
   const { isOnline } = useNetworkState();
@@ -73,6 +75,9 @@ export default function PlaylistDetailScreen() {
   const loadedPlaylist = hasLoadedPlaylistItems(playlist) ? playlist : null;
   const displayName = playlist?.name ?? playlistName ?? "Playlist";
   const displayImageUrl = playlist?.images?.[0]?.url;
+  const canEditPlaylist = Boolean(
+    id && user?.id && playlist?.owner?.id === user.id
+  );
 
   const handleEditPress = useCallback(() => {
     if (id) {
@@ -255,9 +260,9 @@ export default function PlaylistDetailScreen() {
       data={loadedPlaylist?.items.items || []}
       emptyMessage="No tracks found in this playlist."
       error={error}
-      headerIcon="edit"
+      headerIcon={canEditPlaylist ? "edit" : undefined}
       headerIconPress={handleEditPress}
-      headerIconShowLength={1}
+      headerIconShowLength={canEditPlaylist ? 1 : 0}
       imageUrl={displayImageUrl}
       isInitialLoading={isInitialLoading}
       isLoadingMore={isLoadingMoreTracks}
