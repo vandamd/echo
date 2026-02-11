@@ -363,11 +363,12 @@ export default function PlaylistCoverScreen() {
   const getItemLayout = useCallback(
     (_: ArrayLike<Asset> | null | undefined, index: number) => ({
       length: ITEM_SIZE,
-      offset: ITEM_SIZE * Math.floor(index / COLUMNS),
+      offset: ITEM_SIZE * index,
       index,
     }),
     []
   );
+
 
   if (loadState === "loading") {
     return (
