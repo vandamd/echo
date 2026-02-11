@@ -11,7 +11,18 @@
       "backgroundColor": "#000000",
       "package": "com.vandam.echo"
     },
-    "plugins": ["expo-router", "expo-secure-store"],
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow Echo to access your photos.",
+          "savePhotosPermission": "Allow Echo to save photos.",
+          "granularPermissions": ["photo"]
+        }
+      ]
+    ],
     "experiments": {
       "typedRoutes": true
     },

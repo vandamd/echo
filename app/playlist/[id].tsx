@@ -74,12 +74,12 @@ export default function PlaylistDetailScreen() {
   const displayName = playlist?.name ?? playlistName ?? "Playlist";
   const displayImageUrl = playlist?.images?.[0]?.url;
 
-  const handleTitlePress = useCallback(() => {
+  const handleEditPress = useCallback(() => {
     if (id) {
       router.push({
-        pathname: "/rename-playlist",
+        pathname: "/playlist/[id]/edit",
         params: {
-          playlistId: id,
+          id,
           currentName: displayName,
         },
       });
@@ -255,6 +255,9 @@ export default function PlaylistDetailScreen() {
       data={loadedPlaylist?.items.items || []}
       emptyMessage="No tracks found in this playlist."
       error={error}
+      headerIcon="edit"
+      headerIconPress={handleEditPress}
+      headerIconShowLength={1}
       imageUrl={displayImageUrl}
       isInitialLoading={isInitialLoading}
       isLoadingMore={isLoadingMoreTracks}
@@ -262,7 +265,6 @@ export default function PlaylistDetailScreen() {
         `${item.item?.id || "unknown-track"}-${index}`
       }
       onLoadMore={loadMoreTracks}
-      onTitlePress={handleTitlePress}
       placeholderIcon="music-note"
       renderItem={renderTrackItem}
       title={displayName}

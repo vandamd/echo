@@ -1,7 +1,7 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React from "react";
-import { StyleSheet, View } from "react-native";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { useSettings } from "@/features/settings";
 import { n } from "@/shared/utils";
 import { HapticPressable } from "./HapticPressable";
@@ -11,6 +11,7 @@ interface HeaderProps {
   iconName?: keyof typeof MaterialIcons.glyphMap;
   onIconPress?: () => void;
   iconShowLength?: number;
+  iconLoading?: boolean;
   headerTitle?: string;
   backEvent?: () => void;
   hideBackButton?: boolean;
@@ -21,6 +22,7 @@ export const Header = React.memo(function Header({
   iconName,
   onIconPress,
   iconShowLength = 1,
+  iconLoading = false,
   headerTitle,
   backEvent,
   hideBackButton = false,
@@ -36,6 +38,27 @@ export const Header = React.memo(function Header({
       };
 
   const iconColor = invertColors ? "black" : "white";
+  let rightSlot = <View style={styles.iconContainerRightEmpty} />;
+
+  if (iconLoading) {
+    rightSlot = (
+      <View style={styles.iconContainerRightIcon}>
+        <ActivityIndicator
+          color={iconColor}
+          size="small"
+          style={styles.loadingSpinner}
+        />
+      </View>
+    );
+  } else if (iconShowLength > 0 && iconName) {
+    rightSlot = (
+      <HapticPressable onPress={onIconPress}>
+        <View style={styles.iconContainerRightIcon}>
+          <MaterialIcons color={iconColor} name={iconName} size={n(28)} />
+        </View>
+      </HapticPressable>
+    );
+  }
 
   return (
     <View
@@ -72,15 +95,7 @@ export const Header = React.memo(function Header({
           {headerTitle}
         </StyledText>
       )}
-      {iconShowLength > 0 && iconName ? (
-        <HapticPressable onPress={onIconPress}>
-          <View style={styles.iconContainerRight}>
-            <MaterialIcons color={iconColor} name={iconName} size={n(28)} />
-          </View>
-        </HapticPressable>
-      ) : (
-        <View style={styles.iconContainerRight} />
-      )}
+      {rightSlot}
     </View>
   );
 });
@@ -101,12 +116,19 @@ const styles = StyleSheet.create({
     paddingTop: n(6),
     paddingRight: n(4),
   },
-  iconContainerRight: {
+  iconContainerRightIcon: {
     width: n(32),
     height: n(32),
     alignItems: "center",
     paddingTop: n(6),
     paddingLeft: n(4),
+  },
+  iconContainerRightEmpty: {
+    width: n(32),
+    height: n(32),
+  },
+  loadingSpinner: {
+    marginTop: n(4),
   },
   titlePressable: {
     maxWidth: "75%",

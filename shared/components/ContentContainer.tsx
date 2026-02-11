@@ -16,6 +16,7 @@ interface ContentContainerProps {
   headerIcon?: keyof typeof MaterialIcons.glyphMap;
   headerIconPress?: () => void;
   headerIconShowLength?: number;
+  headerIconLoading?: boolean;
   style?: StyleProp<ViewStyle>;
   onTitlePress?: () => void;
 }
@@ -28,6 +29,7 @@ export default function ContentContainer({
   headerIcon,
   headerIconPress,
   headerIconShowLength = 1,
+  headerIconLoading = false,
   style,
   onTitlePress,
 }: ContentContainerProps) {
@@ -57,6 +59,7 @@ export default function ContentContainer({
             backEvent={handleBack}
             headerTitle={headerTitle}
             hideBackButton={hideBackButton}
+            iconLoading={headerIconLoading}
             iconName={headerIcon}
             iconShowLength={headerIconShowLength}
             onIconPress={headerIconPress}
