@@ -160,9 +160,9 @@ export default function PlaylistCoverScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [photos, setPhotos] = useState<Asset[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [loadState, setLoadState] = useState<
-    "loading" | "loaded" | "denied"
-  >("loading");
+  const [loadState, setLoadState] = useState<"loading" | "loaded" | "denied">(
+    "loading"
+  );
 
   const [hasMore, setHasMore] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
@@ -364,12 +364,11 @@ export default function PlaylistCoverScreen() {
   const getItemLayout = useCallback(
     (_: ArrayLike<Asset> | null | undefined, index: number) => ({
       length: ITEM_SIZE,
-      offset: ITEM_SIZE * index,
+      offset: ITEM_SIZE * Math.floor(index / COLUMNS),
       index,
     }),
     []
   );
-
 
   if (loadState === "loading") {
     return (
