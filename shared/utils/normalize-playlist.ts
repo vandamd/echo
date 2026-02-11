@@ -26,6 +26,9 @@ interface RawPlaylistItemsPage {
   next: string | null;
 }
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
 const hasTrackEntries = (value: unknown): value is RawPlaylistItems => {
   if (!value || typeof value !== "object") {
     return false;
@@ -54,7 +57,7 @@ const normalizeTrackEntries = (
     };
   });
 
-export const normalizePlaylist = (
+const normalizePlaylist = (
   raw: Record<string, unknown>
 ): SpotifyPlaylistFull => {
   const data = raw as Record<string, unknown> & {
@@ -79,7 +82,14 @@ export const normalizePlaylist = (
   return data as unknown as SpotifyPlaylistFull;
 };
 
-export const normalizePlaylistItemsPage = (
+export const parsePlaylist = (raw: unknown): SpotifyPlaylistFull | null => {
+  if (!isRecord(raw)) {
+    return null;
+  }
+  return normalizePlaylist(raw);
+};
+
+const normalizePlaylistItemsPage = (
   raw: Record<string, unknown>
 ): { items: SpotifyPlaylistTrack[]; next: string | null } => {
   const data = raw as unknown as RawPlaylistItemsPage;
@@ -87,4 +97,13 @@ export const normalizePlaylistItemsPage = (
     items: normalizeTrackEntries(data.items ?? []),
     next: data.next ?? null,
   };
+};
+
+export const parsePlaylistItemsPage = (
+  raw: unknown
+): { items: SpotifyPlaylistTrack[]; next: string | null } | null => {
+  if (!isRecord(raw)) {
+    return null;
+  }
+  return normalizePlaylistItemsPage(raw);
 };

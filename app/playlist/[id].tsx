@@ -15,8 +15,8 @@ import type {
 import { log, logError } from "@/shared/utils";
 import { apiGet } from "@/shared/utils/api-client";
 import {
-  normalizePlaylist,
-  normalizePlaylistItemsPage,
+  parsePlaylist,
+  parsePlaylistItemsPage,
 } from "@/shared/utils/normalize-playlist";
 
 const hasLoadedPlaylistItems = (
@@ -41,9 +41,7 @@ export default function PlaylistDetailScreen() {
       return null;
     }
     try {
-      return normalizePlaylist(
-        JSON.parse(playlistString) as Record<string, unknown>
-      );
+      return parsePlaylist(JSON.parse(playlistString));
     } catch {
       return null;
     }
@@ -110,10 +108,10 @@ export default function PlaylistDetailScreen() {
       }
 
       try {
-        const raw = await apiGet<Record<string, unknown>>(
+        const raw = await apiGet<unknown>(
           `https://api.spotify.com/v1/playlists/${id}`
         );
-        const data = raw ? normalizePlaylist(raw) : null;
+        const data = raw ? parsePlaylist(raw) : null;
         if (data) {
           log("Playlist details: Fetched fresh data from API");
           setPlaylist(data);
@@ -146,9 +144,12 @@ export default function PlaylistDetailScreen() {
     }
     setIsLoadingMoreTracks(true);
     try {
-      const raw = await apiGet<Record<string, unknown>>(playlist.items.next);
+      const raw = await apiGet<unknown>(playlist.items.next);
       if (raw) {
-        const data = normalizePlaylistItemsPage(raw);
+        const data = parsePlaylistItemsPage(raw);
+        if (!data) {
+          return;
+        }
         setPlaylist((prevPlaylist) => {
           if (!prevPlaylist?.items) {
             return prevPlaylist;
