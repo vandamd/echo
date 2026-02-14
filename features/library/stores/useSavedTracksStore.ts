@@ -3,7 +3,7 @@ import type {
   SavedTrackObject,
   SpotifyPaginatedResponse,
 } from "@/shared/types/spotify";
-import { apiGet } from "@/shared/utils/api-client";
+import { apiGetWithStatus } from "@/shared/utils/api-client";
 import { saveCachedData } from "../utils/cache";
 
 interface SavedTracksState {
@@ -12,6 +12,8 @@ interface SavedTracksState {
   isRefreshing: boolean;
   isFetching: boolean;
   isLoadingMore: boolean;
+  isRateLimited: boolean;
+  rateLimitRetryAt: number | null;
   fetch: (options?: { showRefreshing?: boolean }) => Promise<void>;
   fetchMore: () => Promise<void>;
   setSavedTracks: (savedTracks: SavedTrackObject[] | null) => void;
@@ -24,6 +26,8 @@ export const useSavedTracksStore = create<SavedTracksState>()((set, get) => ({
   isRefreshing: false,
   isFetching: false,
   isLoadingMore: false,
+  isRateLimited: false,
+  rateLimitRetryAt: null,
 
   fetch: async (options) => {
     const showRefreshing = options?.showRefreshing ?? true;
@@ -33,14 +37,33 @@ export const useSavedTracksStore = create<SavedTracksState>()((set, get) => ({
       set({ isFetching: true });
     }
     try {
-      const data = await apiGet<SpotifyPaginatedResponse<SavedTrackObject>>(
-        "https://api.spotify.com/v1/me/tracks?limit=50"
-      );
+      const result = await apiGetWithStatus<
+        SpotifyPaginatedResponse<SavedTrackObject>
+      >("https://api.spotify.com/v1/me/tracks?limit=50");
+      const data = result.data;
       if (data) {
-        set({ savedTracks: data.items, nextUrl: data.next });
+        set({
+          savedTracks: data.items,
+          nextUrl: data.next,
+          isRateLimited: false,
+          rateLimitRetryAt: null,
+        });
         await saveCachedData({ tracks: data.items });
+      } else if (result.status === 429) {
+        set({
+          isRateLimited: true,
+          rateLimitRetryAt:
+            result.retryAfterMs !== null
+              ? Date.now() + result.retryAfterMs
+              : null,
+        });
       } else if (get().savedTracks === null) {
-        set({ savedTracks: [], nextUrl: null });
+        set({
+          savedTracks: [],
+          nextUrl: null,
+          isRateLimited: false,
+          rateLimitRetryAt: null,
+        });
       }
     } finally {
       if (showRefreshing) {
@@ -57,13 +80,26 @@ export const useSavedTracksStore = create<SavedTracksState>()((set, get) => ({
       return;
     }
     set({ isLoadingMore: true });
-    const data =
-      await apiGet<SpotifyPaginatedResponse<SavedTrackObject>>(nextUrl);
+    const result =
+      await apiGetWithStatus<SpotifyPaginatedResponse<SavedTrackObject>>(
+        nextUrl
+      );
+    const data = result.data;
     if (data) {
       set((state) => ({
         savedTracks: [...(state.savedTracks || []), ...data.items],
         nextUrl: data.next,
+        isRateLimited: false,
+        rateLimitRetryAt: null,
       }));
+    } else if (result.status === 429) {
+      set({
+        isRateLimited: true,
+        rateLimitRetryAt:
+          result.retryAfterMs !== null
+            ? Date.now() + result.retryAfterMs
+            : null,
+      });
     }
     set({ isLoadingMore: false });
   },
@@ -76,5 +112,7 @@ export const useSavedTracksStore = create<SavedTracksState>()((set, get) => ({
       isRefreshing: false,
       isFetching: false,
       isLoadingMore: false,
+      isRateLimited: false,
+      rateLimitRetryAt: null,
     }),
 }));

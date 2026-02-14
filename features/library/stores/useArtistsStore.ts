@@ -22,6 +22,8 @@ interface ArtistsState {
   isRefreshing: boolean;
   isFetching: boolean;
   isLoadingMore: boolean;
+  isRateLimited: boolean;
+  rateLimitRetryAt: number | null;
   fetch: (options?: { showRefreshing?: boolean }) => Promise<void>;
   fetchMore: () => Promise<void>;
   followArtist: (artistId: string) => Promise<boolean>;
@@ -47,6 +49,8 @@ export const useArtistsStore = create<ArtistsState>()((set, get) => ({
   isRefreshing: false,
   isFetching: false,
   isLoadingMore: false,
+  isRateLimited: false,
+  rateLimitRetryAt: null,
 
   fetch: async (options) => {
     const showRefreshing = options?.showRefreshing ?? true;
@@ -56,14 +60,33 @@ export const useArtistsStore = create<ArtistsState>()((set, get) => ({
       set({ isFetching: true });
     }
     try {
-      const data = await apiGet<SpotifyFollowedArtistsResponse>(
+      const result = await apiGetWithStatus<SpotifyFollowedArtistsResponse>(
         "https://api.spotify.com/v1/me/following?type=artist&limit=50"
       );
+      const data = result.data;
       if (data) {
-        set({ artists: data.artists.items, nextUrl: data.artists.next });
+        set({
+          artists: data.artists.items,
+          nextUrl: data.artists.next,
+          isRateLimited: false,
+          rateLimitRetryAt: null,
+        });
         await saveCachedData({ artists: data.artists.items });
+      } else if (result.status === 429) {
+        set({
+          isRateLimited: true,
+          rateLimitRetryAt:
+            result.retryAfterMs !== null
+              ? Date.now() + result.retryAfterMs
+              : null,
+        });
       } else if (get().artists === null) {
-        set({ artists: [], nextUrl: null });
+        set({
+          artists: [],
+          nextUrl: null,
+          isRateLimited: false,
+          rateLimitRetryAt: null,
+        });
       }
     } finally {
       if (showRefreshing) {
@@ -80,12 +103,24 @@ export const useArtistsStore = create<ArtistsState>()((set, get) => ({
       return;
     }
     set({ isLoadingMore: true });
-    const data = await apiGet<SpotifyFollowedArtistsResponse>(nextUrl);
+    const result =
+      await apiGetWithStatus<SpotifyFollowedArtistsResponse>(nextUrl);
+    const data = result.data;
     if (data) {
       set((state) => ({
         artists: [...(state.artists || []), ...data.artists.items],
         nextUrl: data.artists.next,
+        isRateLimited: false,
+        rateLimitRetryAt: null,
       }));
+    } else if (result.status === 429) {
+      set({
+        isRateLimited: true,
+        rateLimitRetryAt:
+          result.retryAfterMs !== null
+            ? Date.now() + result.retryAfterMs
+            : null,
+      });
     }
     set({ isLoadingMore: false });
   },
@@ -206,5 +241,7 @@ export const useArtistsStore = create<ArtistsState>()((set, get) => ({
       isRefreshing: false,
       isFetching: false,
       isLoadingMore: false,
+      isRateLimited: false,
+      rateLimitRetryAt: null,
     }),
 }));

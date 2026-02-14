@@ -1,14 +1,34 @@
 import { useRouter } from "expo-router";
 import { useCallback, useMemo } from "react";
-import { View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { useAuth } from "@/features/auth";
 import { useSavedTracksStore } from "@/features/library/stores";
 import { usePlayback } from "@/features/playback";
-import { ListScreen, MediaListItem } from "@/shared/components";
+import { ListScreen, MediaListItem, StyledText } from "@/shared/components";
 import { useNetworkState, usePreventDoubleTap } from "@/shared/hooks";
 import { tabScreenStyles as styles } from "@/shared/styles/detailScreen";
 import type { SavedTrackObject } from "@/shared/types/spotify";
-import { getArtistNames, log, logError, logWarn } from "@/shared/utils";
+import {
+  getArtistNames,
+  getRateLimitMessage,
+  log,
+  logError,
+  logWarn,
+  n,
+} from "@/shared/utils";
+
+const RATE_LIMIT_MESSAGE_ID = "RATE_LIMIT_MESSAGE_ID";
+
+interface LikedSongsRateLimitItem {
+  id: typeof RATE_LIMIT_MESSAGE_ID;
+  message: string;
+}
+
+type LikedSongsListItem = SavedTrackObject | LikedSongsRateLimitItem;
+
+const isRateLimitItem = (
+  item: LikedSongsListItem
+): item is LikedSongsRateLimitItem => "id" in item;
 
 export default function LikedSongsScreen() {
   const { isLoading } = useAuth();
@@ -18,6 +38,8 @@ export default function LikedSongsScreen() {
   const isFetching = useSavedTracksStore((s) => s.isFetching);
   const fetchMore = useSavedTracksStore((s) => s.fetchMore);
   const isLoadingMore = useSavedTracksStore((s) => s.isLoadingMore);
+  const isRateLimited = useSavedTracksStore((s) => s.isRateLimited);
+  const rateLimitRetryAt = useSavedTracksStore((s) => s.rateLimitRetryAt);
   const nextUrl = useSavedTracksStore((s) => s.nextUrl);
   const { playTrackWithContext, getPlaybackState, toggleShuffle } =
     usePlayback();
@@ -36,6 +58,17 @@ export default function LikedSongsScreen() {
   const filteredTracks = useMemo(
     () => savedTracks?.filter((item) => item.track !== null) ?? [],
     [savedTracks]
+  );
+  const rateLimitMessage = useMemo(
+    () => getRateLimitMessage("liked songs", rateLimitRetryAt),
+    [rateLimitRetryAt]
+  );
+  const rateLimitMessageItem = useMemo<LikedSongsRateLimitItem>(
+    () => ({
+      id: RATE_LIMIT_MESSAGE_ID,
+      message: rateLimitMessage,
+    }),
+    [rateLimitMessage]
   );
 
   const handleTrackPress = usePreventDoubleTap(
@@ -96,9 +129,15 @@ export default function LikedSongsScreen() {
     item,
     index,
   }: {
-    item: SavedTrackObject;
+    item: LikedSongsListItem;
     index: number;
   }) => {
+    if (isRateLimitItem(item)) {
+      return (
+        <StyledText style={tabStyles.rateLimitText}>{item.message}</StyledText>
+      );
+    }
+
     if (!item.track) {
       logWarn("Track is null for item:", item);
       return null;
@@ -140,16 +179,24 @@ export default function LikedSongsScreen() {
     }
   };
 
+  const baseTracks =
+    filteredTracks.length > 0 ? filteredTracks : (savedTracks ?? []);
+  const displayTracks: LikedSongsListItem[] = isRateLimited
+    ? [rateLimitMessageItem, ...baseTracks]
+    : baseTracks;
+
   return (
     <ListScreen
-      data={filteredTracks.length > 0 ? filteredTracks : savedTracks}
+      data={displayTracks}
       emptyMessage="No saved tracks found."
       headerIconPress={handlePlayingPress}
       isLoadingMore={isLoadingMore}
       isOnline={isOnline}
       isRefreshing={isRefreshing}
-      keyExtractor={(item: SavedTrackObject) =>
-        `${item.added_at}-${item.track?.id || "unknown"}`
+      keyExtractor={(item: LikedSongsListItem) =>
+        isRateLimitItem(item)
+          ? item.id
+          : `${item.added_at}-${item.track?.id || "unknown"}`
       }
       onLoadMore={handleLoadMore}
       onRefresh={handleRefresh}
@@ -159,3 +206,12 @@ export default function LikedSongsScreen() {
     />
   );
 }
+
+const tabStyles = StyleSheet.create({
+  rateLimitText: {
+    fontSize: n(16),
+    lineHeight: n(20),
+    textAlign: "center",
+    marginBottom: n(2),
+  },
+});

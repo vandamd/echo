@@ -1,18 +1,26 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
-import { View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { ALBUM_DETAIL_KEY_PREFIX } from "@/constants/spotify";
 import { useAuth } from "@/features/auth";
 import {
   refreshSavedAlbumsFromCache,
   useAlbumsStore,
 } from "@/features/library";
-import { ListScreen, MediaListItem } from "@/shared/components";
+import { ListScreen, MediaListItem, StyledText } from "@/shared/components";
 import { useNetworkState, usePreventDoubleTap } from "@/shared/hooks";
 import { tabScreenStyles as styles } from "@/shared/styles/detailScreen";
 import type { SpotifySavedAlbum } from "@/shared/types/spotify";
-import { getArtistNames, log, logError } from "@/shared/utils";
+import {
+  getArtistNames,
+  getRateLimitMessage,
+  log,
+  logError,
+  n,
+} from "@/shared/utils";
+
+const RATE_LIMIT_MESSAGE_ID = "RATE_LIMIT_MESSAGE_ID";
 
 export default function AlbumsScreen() {
   const { isLoading } = useAuth();
@@ -22,6 +30,8 @@ export default function AlbumsScreen() {
   const isFetching = useAlbumsStore((s) => s.isFetching);
   const fetchMore = useAlbumsStore((s) => s.fetchMore);
   const isLoadingMore = useAlbumsStore((s) => s.isLoadingMore);
+  const isRateLimited = useAlbumsStore((s) => s.isRateLimited);
+  const rateLimitRetryAt = useAlbumsStore((s) => s.rateLimitRetryAt);
   const nextUrl = useAlbumsStore((s) => s.nextUrl);
   const router = useRouter();
 
@@ -42,6 +52,10 @@ export default function AlbumsScreen() {
           )
         : null,
     [albumSource]
+  );
+  const albumRateLimitMessage = useMemo(
+    () => getRateLimitMessage("albums", rateLimitRetryAt),
+    [rateLimitRetryAt]
   );
 
   const checkCachedAlbums = useCallback(async () => {
@@ -121,6 +135,14 @@ export default function AlbumsScreen() {
   });
 
   const renderAlbumItem = ({ item }: { item: SpotifySavedAlbum }) => {
+    if (item.album.id === RATE_LIMIT_MESSAGE_ID) {
+      return (
+        <StyledText style={tabStyles.rateLimitText}>
+          {item.album.name}
+        </StyledText>
+      );
+    }
+
     const isOffline = !isOnline;
     const isUncached = isOffline && !cachedAlbumIds.has(item.album.id);
 
@@ -154,9 +176,30 @@ export default function AlbumsScreen() {
     }
   };
 
+  const rateLimitMessageItem: SpotifySavedAlbum = {
+    added_at: "",
+    album: {
+      album_type: "album",
+      total_tracks: 0,
+      external_urls: { spotify: "" },
+      href: "",
+      id: RATE_LIMIT_MESSAGE_ID,
+      images: [],
+      name: albumRateLimitMessage,
+      release_date: "",
+      release_date_precision: "day",
+      type: "album",
+      uri: "",
+      artists: [],
+    },
+  };
+  const displayAlbums = isRateLimited
+    ? [rateLimitMessageItem, ...(sortedAlbums ?? [])]
+    : sortedAlbums;
+
   return (
     <ListScreen
-      data={sortedAlbums}
+      data={displayAlbums}
       emptyMessage="No saved albums found."
       headerIconPress={handlePlayingPress}
       isLoadingMore={isLoadingMore}
@@ -170,3 +213,12 @@ export default function AlbumsScreen() {
     />
   );
 }
+
+const tabStyles = StyleSheet.create({
+  rateLimitText: {
+    fontSize: n(16),
+    lineHeight: n(20),
+    textAlign: "center",
+    marginBottom: n(2),
+  },
+});

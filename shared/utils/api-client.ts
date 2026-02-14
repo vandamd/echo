@@ -49,6 +49,7 @@ const getRetryAfterMs = (response: Response): number => {
 export interface ApiRequestResult<T> {
   data: T | null;
   status: number | null;
+  retryAfterMs: number | null;
 }
 
 const apiFetch = async <T>(
@@ -131,13 +132,13 @@ const apiFetchWithStatus = async <T>(
 ): Promise<ApiRequestResult<T>> => {
   if (!(getToken && onLogout)) {
     logError("API client not configured");
-    return { data: null, status: null };
+    return { data: null, status: null, retryAfterMs: null };
   }
 
   const token = await getToken();
   if (!token) {
     logError("API: No valid token available");
-    return { data: null, status: null };
+    return { data: null, status: null, retryAfterMs: null };
   }
 
   try {
@@ -151,10 +152,10 @@ const apiFetchWithStatus = async <T>(
 
     if (response.ok) {
       if (response.status === 204) {
-        return { data: null, status: response.status };
+        return { data: null, status: response.status, retryAfterMs: null };
       }
       const data = (await response.json()) as T;
-      return { data, status: response.status };
+      return { data, status: response.status, retryAfterMs: null };
     }
 
     if (response.status === 401 && !isRetry) {
@@ -165,7 +166,7 @@ const apiFetchWithStatus = async <T>(
     if (response.status === 401) {
       logError("API: 401 after retry, logging out");
       await onLogout();
-      return { data: null, status: response.status };
+      return { data: null, status: response.status, retryAfterMs: null };
     }
 
     if (response.status === 429 && rateLimitRetries < MAX_RATE_LIMIT_RETRIES) {
@@ -174,7 +175,7 @@ const apiFetchWithStatus = async <T>(
         logWarn(
           `API: 429 for ${url}, retry-after ${retryAfterMs}ms is too long; skipping automatic retry`
         );
-        return { data: null, status: response.status };
+        return { data: null, status: response.status, retryAfterMs };
       }
       logWarn(
         `API: 429 for ${url}, retrying in ${retryAfterMs}ms (${rateLimitRetries + 1}/${MAX_RATE_LIMIT_RETRIES})`
@@ -183,14 +184,22 @@ const apiFetchWithStatus = async <T>(
       return apiFetchWithStatus<T>(url, options, isRetry, rateLimitRetries + 1);
     }
 
+    if (response.status === 429) {
+      return {
+        data: null,
+        status: response.status,
+        retryAfterMs: getRetryAfterMs(response),
+      };
+    }
+
     const errorData = await response
       .json()
       .catch(() => ({ message: "Unknown error" }));
     logError(`API: ${response.status} for ${url}`, errorData);
-    return { data: null, status: response.status };
+    return { data: null, status: response.status, retryAfterMs: null };
   } catch (error) {
     logError(`API: Network error for ${url}`, error);
-    return { data: null, status: null };
+    return { data: null, status: null, retryAfterMs: null };
   }
 };
 

@@ -1,13 +1,15 @@
 import { useRouter } from "expo-router";
 import { useCallback, useMemo } from "react";
-import { View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { useAuth } from "@/features/auth";
 import { useArtistsStore } from "@/features/library/stores";
-import { ListScreen, MediaListItem } from "@/shared/components";
+import { ListScreen, MediaListItem, StyledText } from "@/shared/components";
 import { useNetworkState, usePreventDoubleTap } from "@/shared/hooks";
 import { tabScreenStyles as styles } from "@/shared/styles/detailScreen";
 import type { SpotifyArtist } from "@/shared/types/spotify";
-import { n } from "@/shared/utils";
+import { getRateLimitMessage, n } from "@/shared/utils";
+
+const RATE_LIMIT_MESSAGE_ID = "RATE_LIMIT_MESSAGE_ID";
 
 export default function ArtistsScreen() {
   const { isLoading } = useAuth();
@@ -17,6 +19,8 @@ export default function ArtistsScreen() {
   const isFetching = useArtistsStore((s) => s.isFetching);
   const fetchMore = useArtistsStore((s) => s.fetchMore);
   const isLoadingMore = useArtistsStore((s) => s.isLoadingMore);
+  const isRateLimited = useArtistsStore((s) => s.isRateLimited);
+  const rateLimitRetryAt = useArtistsStore((s) => s.rateLimitRetryAt);
   const nextUrl = useArtistsStore((s) => s.nextUrl);
   const router = useRouter();
 
@@ -29,6 +33,10 @@ export default function ArtistsScreen() {
             .sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""))
         : null,
     [artists]
+  );
+  const artistRateLimitMessage = useMemo(
+    () => getRateLimitMessage("artists", rateLimitRetryAt),
+    [rateLimitRetryAt]
   );
 
   const handleRefresh = useCallback(() => {
@@ -58,6 +66,12 @@ export default function ArtistsScreen() {
   });
 
   const renderArtistItem = ({ item }: { item: SpotifyArtist }) => {
+    if (item.id === RATE_LIMIT_MESSAGE_ID) {
+      return (
+        <StyledText style={tabStyles.rateLimitText}>{item.name}</StyledText>
+      );
+    }
+
     const isDisabled = !isOnline;
 
     return (
@@ -88,9 +102,23 @@ export default function ArtistsScreen() {
     }
   };
 
+  const rateLimitMessageItem: SpotifyArtist = {
+    external_urls: { spotify: "" },
+    genres: [],
+    href: "",
+    id: RATE_LIMIT_MESSAGE_ID,
+    images: [],
+    name: artistRateLimitMessage,
+    type: "artist",
+    uri: "",
+  };
+  const displayArtists = isRateLimited
+    ? [rateLimitMessageItem, ...(sortedArtists ?? [])]
+    : sortedArtists;
+
   return (
     <ListScreen
-      data={sortedArtists}
+      data={displayArtists}
       emptyMessage="No saved artists found."
       headerIconPress={handlePlayingPress}
       isLoadingMore={isLoadingMore}
@@ -105,3 +133,12 @@ export default function ArtistsScreen() {
     />
   );
 }
+
+const tabStyles = StyleSheet.create({
+  rateLimitText: {
+    fontSize: n(16),
+    lineHeight: n(20),
+    textAlign: "center",
+    marginBottom: n(2),
+  },
+});

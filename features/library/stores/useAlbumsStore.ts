@@ -6,7 +6,12 @@ import type {
   SpotifyPaginatedResponse,
   SpotifySavedAlbum,
 } from "@/shared/types/spotify";
-import { apiDelete, apiGet, apiPut } from "@/shared/utils/api-client";
+import {
+  apiDelete,
+  apiGet,
+  apiGetWithStatus,
+  apiPut,
+} from "@/shared/utils/api-client";
 import { log, logError } from "@/shared/utils/logger";
 import { saveCachedData } from "../utils/cache";
 
@@ -16,6 +21,8 @@ interface AlbumsState {
   isRefreshing: boolean;
   isFetching: boolean;
   isLoadingMore: boolean;
+  isRateLimited: boolean;
+  rateLimitRetryAt: number | null;
   fetch: (options?: { showRefreshing?: boolean }) => Promise<void>;
   fetchMore: () => Promise<void>;
   saveAlbum: (albumId: string) => Promise<boolean>;
@@ -31,6 +38,8 @@ export const useAlbumsStore = create<AlbumsState>()((set, get) => ({
   isRefreshing: false,
   isFetching: false,
   isLoadingMore: false,
+  isRateLimited: false,
+  rateLimitRetryAt: null,
 
   fetch: async (options) => {
     const showRefreshing = options?.showRefreshing ?? true;
@@ -40,14 +49,33 @@ export const useAlbumsStore = create<AlbumsState>()((set, get) => ({
       set({ isFetching: true });
     }
     try {
-      const data = await apiGet<SpotifyPaginatedResponse<SpotifySavedAlbum>>(
-        "https://api.spotify.com/v1/me/albums?limit=50"
-      );
+      const result = await apiGetWithStatus<
+        SpotifyPaginatedResponse<SpotifySavedAlbum>
+      >("https://api.spotify.com/v1/me/albums?limit=50");
+      const data = result.data;
       if (data) {
-        set({ albums: data.items, nextUrl: data.next });
+        set({
+          albums: data.items,
+          nextUrl: data.next,
+          isRateLimited: false,
+          rateLimitRetryAt: null,
+        });
         await saveCachedData({ albums: data.items });
+      } else if (result.status === 429) {
+        set({
+          isRateLimited: true,
+          rateLimitRetryAt:
+            result.retryAfterMs !== null
+              ? Date.now() + result.retryAfterMs
+              : null,
+        });
       } else if (get().albums === null) {
-        set({ albums: [], nextUrl: null });
+        set({
+          albums: [],
+          nextUrl: null,
+          isRateLimited: false,
+          rateLimitRetryAt: null,
+        });
       }
     } finally {
       if (showRefreshing) {
@@ -64,13 +92,26 @@ export const useAlbumsStore = create<AlbumsState>()((set, get) => ({
       return;
     }
     set({ isLoadingMore: true });
-    const data =
-      await apiGet<SpotifyPaginatedResponse<SpotifySavedAlbum>>(nextUrl);
+    const result =
+      await apiGetWithStatus<SpotifyPaginatedResponse<SpotifySavedAlbum>>(
+        nextUrl
+      );
+    const data = result.data;
     if (data) {
       set((state) => ({
         albums: [...(state.albums || []), ...data.items],
         nextUrl: data.next,
+        isRateLimited: false,
+        rateLimitRetryAt: null,
       }));
+    } else if (result.status === 429) {
+      set({
+        isRateLimited: true,
+        rateLimitRetryAt:
+          result.retryAfterMs !== null
+            ? Date.now() + result.retryAfterMs
+            : null,
+      });
     }
     set({ isLoadingMore: false });
   },
@@ -159,5 +200,7 @@ export const useAlbumsStore = create<AlbumsState>()((set, get) => ({
       isRefreshing: false,
       isFetching: false,
       isLoadingMore: false,
+      isRateLimited: false,
+      rateLimitRetryAt: null,
     }),
 }));

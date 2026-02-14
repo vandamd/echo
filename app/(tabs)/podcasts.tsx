@@ -1,19 +1,21 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
-import { View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { SHOW_DETAIL_KEY_PREFIX } from "@/constants/spotify";
 import { refreshFollowedPodcastsFromCache } from "@/features/library";
 import { usePodcastsStore } from "@/features/library/stores";
 import { useSettings } from "@/features/settings";
-import { ListScreen, MediaListItem } from "@/shared/components";
+import { ListScreen, MediaListItem, StyledText } from "@/shared/components";
 import { useNetworkState, usePreventDoubleTap } from "@/shared/hooks";
 import { tabScreenStyles as styles } from "@/shared/styles/detailScreen";
 import type { SpotifySavedShow } from "@/shared/types/spotify";
+import { getRateLimitMessage, n } from "@/shared/utils";
 import { getLargestImage } from "@/shared/utils/formatters";
 import { log, logError } from "@/shared/utils/logger";
 
 const YOUR_EPISODES_ID = "YOUR_EPISODES_ID";
+const RATE_LIMIT_MESSAGE_ID = "RATE_LIMIT_MESSAGE_ID";
 
 export default function PodcastsScreen() {
   const podcasts = usePodcastsStore((s) => s.podcasts);
@@ -22,6 +24,8 @@ export default function PodcastsScreen() {
   const isFetching = usePodcastsStore((s) => s.isFetching);
   const fetchMore = usePodcastsStore((s) => s.fetchMore);
   const isLoadingMore = usePodcastsStore((s) => s.isLoadingMore);
+  const isRateLimited = usePodcastsStore((s) => s.isRateLimited);
+  const rateLimitRetryAt = usePodcastsStore((s) => s.rateLimitRetryAt);
   const nextUrl = usePodcastsStore((s) => s.nextUrl);
   const router = useRouter();
 
@@ -41,6 +45,10 @@ export default function PodcastsScreen() {
           )
         : null,
     [podcastSource]
+  );
+  const podcastRateLimitMessage = useMemo(
+    () => getRateLimitMessage("podcasts", rateLimitRetryAt),
+    [rateLimitRetryAt]
   );
 
   const checkCachedShows = useCallback(async () => {
@@ -136,9 +144,37 @@ export default function PodcastsScreen() {
     ? [yourEpisodesItem, ...sortedPodcasts]
     : [yourEpisodesItem];
   const withoutEpisodes: SpotifySavedShow[] = sortedPodcasts ?? [];
-  const displayPodcasts = hideYourEpisodes ? withoutEpisodes : withEpisodes;
+  const basePodcasts = hideYourEpisodes ? withoutEpisodes : withEpisodes;
+  const rateLimitMessageItem: SpotifySavedShow = {
+    added_at: "",
+    show: {
+      id: RATE_LIMIT_MESSAGE_ID,
+      name: podcastRateLimitMessage,
+      description: "",
+      publisher: "",
+      images: [],
+      total_episodes: 0,
+      uri: "",
+      href: "",
+      media_type: "",
+      explicit: false,
+      type: "show",
+      languages: [],
+    },
+  };
+  const displayPodcasts = isRateLimited
+    ? [rateLimitMessageItem, ...basePodcasts]
+    : basePodcasts;
 
   const renderShowItem = ({ item }: { item: SpotifySavedShow }) => {
+    if (item.show.id === RATE_LIMIT_MESSAGE_ID) {
+      return (
+        <StyledText style={tabStyles.rateLimitText}>
+          {item.show.name}
+        </StyledText>
+      );
+    }
+
     if (item.show.id === YOUR_EPISODES_ID) {
       if (hideYourEpisodes) {
         return null;
@@ -212,3 +248,12 @@ export default function PodcastsScreen() {
     />
   );
 }
+
+const tabStyles = StyleSheet.create({
+  rateLimitText: {
+    fontSize: n(16),
+    lineHeight: n(20),
+    textAlign: "center",
+    marginBottom: n(2),
+  },
+});

@@ -12,6 +12,7 @@ interface PlaylistsState {
   isFetching: boolean;
   isLoadingMore: boolean;
   isRateLimited: boolean;
+  rateLimitRetryAt: number | null;
   fetch: (options?: { showRefreshing?: boolean }) => Promise<void>;
   fetchMore: () => Promise<void>;
   addTrackToPlaylist: (
@@ -29,6 +30,7 @@ export const usePlaylistsStore = create<PlaylistsState>()((set, get) => ({
   isFetching: false,
   isLoadingMore: false,
   isRateLimited: false,
+  rateLimitRetryAt: null,
 
   fetch: async (options) => {
     const showRefreshing = options?.showRefreshing ?? true;
@@ -47,12 +49,24 @@ export const usePlaylistsStore = create<PlaylistsState>()((set, get) => ({
           playlists: data.items,
           nextUrl: data.next,
           isRateLimited: false,
+          rateLimitRetryAt: null,
         });
         await saveCachedData({ playlists: data.items });
       } else if (result.status === 429) {
-        set({ isRateLimited: true });
+        set({
+          isRateLimited: true,
+          rateLimitRetryAt:
+            result.retryAfterMs !== null
+              ? Date.now() + result.retryAfterMs
+              : null,
+        });
       } else if (get().playlists === null) {
-        set({ playlists: [], nextUrl: null, isRateLimited: false });
+        set({
+          playlists: [],
+          nextUrl: null,
+          isRateLimited: false,
+          rateLimitRetryAt: null,
+        });
       }
     } finally {
       if (showRefreshing) {
@@ -76,9 +90,16 @@ export const usePlaylistsStore = create<PlaylistsState>()((set, get) => ({
         playlists: [...(state.playlists || []), ...data.items],
         nextUrl: data.next,
         isRateLimited: false,
+        rateLimitRetryAt: null,
       }));
     } else if (result.status === 429) {
-      set({ isRateLimited: true });
+      set({
+        isRateLimited: true,
+        rateLimitRetryAt:
+          result.retryAfterMs !== null
+            ? Date.now() + result.retryAfterMs
+            : null,
+      });
     }
     set({ isLoadingMore: false });
   },
@@ -105,5 +126,6 @@ export const usePlaylistsStore = create<PlaylistsState>()((set, get) => ({
       isFetching: false,
       isLoadingMore: false,
       isRateLimited: false,
+      rateLimitRetryAt: null,
     }),
 }));

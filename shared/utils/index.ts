@@ -1,6 +1,7 @@
 export * from "./api-client";
 export * from "./formatters";
 export * from "./logger";
+export * from "./rate-limit-message";
 export * from "./scaling";
 export * from "./spotifyApi";
 export * from "./token-helper";
