@@ -1,34 +1,29 @@
 import { useRouter } from "expo-router";
 import { useCallback, useMemo } from "react";
-import { StyleSheet, View } from "react-native";
+import { View } from "react-native";
 import { useAuth } from "@/features/auth";
 import { useSavedTracksStore } from "@/features/library/stores";
 import { usePlayback } from "@/features/playback";
-import { ListScreen, MediaListItem, StyledText } from "@/shared/components";
+import {
+  ListScreen,
+  MediaListItem,
+  RateLimitListMessage,
+} from "@/shared/components";
 import { useNetworkState, usePreventDoubleTap } from "@/shared/hooks";
 import { tabScreenStyles as styles } from "@/shared/styles/detailScreen";
 import type { SavedTrackObject } from "@/shared/types/spotify";
+import type { WithRateLimitItem } from "@/shared/utils";
 import {
   getArtistNames,
   getRateLimitMessage,
+  isRateLimitItem,
   log,
   logError,
   logWarn,
-  n,
+  prependRateLimitItem,
 } from "@/shared/utils";
 
-const RATE_LIMIT_MESSAGE_ID = "RATE_LIMIT_MESSAGE_ID";
-
-interface LikedSongsRateLimitItem {
-  id: typeof RATE_LIMIT_MESSAGE_ID;
-  message: string;
-}
-
-type LikedSongsListItem = SavedTrackObject | LikedSongsRateLimitItem;
-
-const isRateLimitItem = (
-  item: LikedSongsListItem
-): item is LikedSongsRateLimitItem => "id" in item;
+type LikedSongsListItem = WithRateLimitItem<SavedTrackObject>;
 
 export default function LikedSongsScreen() {
   const { isLoading } = useAuth();
@@ -62,13 +57,6 @@ export default function LikedSongsScreen() {
   const rateLimitMessage = useMemo(
     () => getRateLimitMessage("liked songs", rateLimitRetryAt),
     [rateLimitRetryAt]
-  );
-  const rateLimitMessageItem = useMemo<LikedSongsRateLimitItem>(
-    () => ({
-      id: RATE_LIMIT_MESSAGE_ID,
-      message: rateLimitMessage,
-    }),
-    [rateLimitMessage]
   );
 
   const handleTrackPress = usePreventDoubleTap(
@@ -133,9 +121,7 @@ export default function LikedSongsScreen() {
     index: number;
   }) => {
     if (isRateLimitItem(item)) {
-      return (
-        <StyledText style={tabStyles.rateLimitText}>{item.message}</StyledText>
-      );
+      return <RateLimitListMessage message={item.message} />;
     }
 
     if (!item.track) {
@@ -183,9 +169,11 @@ export default function LikedSongsScreen() {
 
   const baseTracks =
     filteredTracks.length > 0 ? filteredTracks : (savedTracks ?? []);
-  const displayTracks: LikedSongsListItem[] = isRateLimited
-    ? [rateLimitMessageItem, ...baseTracks]
-    : baseTracks;
+  const displayTracks: LikedSongsListItem[] = prependRateLimitItem(
+    baseTracks,
+    isRateLimited,
+    rateLimitMessage
+  );
 
   return (
     <ListScreen
@@ -208,12 +196,3 @@ export default function LikedSongsScreen() {
     />
   );
 }
-
-const tabStyles = StyleSheet.create({
-  rateLimitText: {
-    fontSize: n(16),
-    lineHeight: n(20),
-    textAlign: "center",
-    marginBottom: n(2),
-  },
-});

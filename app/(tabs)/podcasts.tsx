@@ -1,21 +1,31 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { View } from "react-native";
 import { SHOW_DETAIL_KEY_PREFIX } from "@/constants/spotify";
 import { refreshFollowedPodcastsFromCache } from "@/features/library";
 import { usePodcastsStore } from "@/features/library/stores";
 import { useSettings } from "@/features/settings";
-import { ListScreen, MediaListItem, StyledText } from "@/shared/components";
+import {
+  ListScreen,
+  MediaListItem,
+  RateLimitListMessage,
+} from "@/shared/components";
 import { useNetworkState, usePreventDoubleTap } from "@/shared/hooks";
 import { tabScreenStyles as styles } from "@/shared/styles/detailScreen";
 import type { SpotifySavedShow } from "@/shared/types/spotify";
-import { getRateLimitMessage, n } from "@/shared/utils";
+import type { WithRateLimitItem } from "@/shared/utils";
+import {
+  getRateLimitMessage,
+  isRateLimitItem,
+  prependRateLimitItem,
+} from "@/shared/utils";
 import { getLargestImage } from "@/shared/utils/formatters";
 import { log, logError } from "@/shared/utils/logger";
 
 const YOUR_EPISODES_ID = "YOUR_EPISODES_ID";
-const RATE_LIMIT_MESSAGE_ID = "RATE_LIMIT_MESSAGE_ID";
+
+type PodcastListItem = WithRateLimitItem<SpotifySavedShow>;
 
 export default function PodcastsScreen() {
   const podcasts = usePodcastsStore((s) => s.podcasts);
@@ -145,34 +155,15 @@ export default function PodcastsScreen() {
     : [yourEpisodesItem];
   const withoutEpisodes: SpotifySavedShow[] = sortedPodcasts ?? [];
   const basePodcasts = hideYourEpisodes ? withoutEpisodes : withEpisodes;
-  const rateLimitMessageItem: SpotifySavedShow = {
-    added_at: "",
-    show: {
-      id: RATE_LIMIT_MESSAGE_ID,
-      name: podcastRateLimitMessage,
-      description: "",
-      publisher: "",
-      images: [],
-      total_episodes: 0,
-      uri: "",
-      href: "",
-      media_type: "",
-      explicit: false,
-      type: "show",
-      languages: [],
-    },
-  };
-  const displayPodcasts = isRateLimited
-    ? [rateLimitMessageItem, ...basePodcasts]
-    : basePodcasts;
+  const displayPodcasts: PodcastListItem[] = prependRateLimitItem(
+    basePodcasts,
+    isRateLimited,
+    podcastRateLimitMessage
+  );
 
-  const renderShowItem = ({ item }: { item: SpotifySavedShow }) => {
-    if (item.show.id === RATE_LIMIT_MESSAGE_ID) {
-      return (
-        <StyledText style={tabStyles.rateLimitText}>
-          {item.show.name}
-        </StyledText>
-      );
+  const renderShowItem = ({ item }: { item: PodcastListItem }) => {
+    if (isRateLimitItem(item)) {
+      return <RateLimitListMessage message={item.message} />;
     }
 
     if (item.show.id === YOUR_EPISODES_ID) {
@@ -221,7 +212,9 @@ export default function PodcastsScreen() {
         emptyMessage="No followed podcasts yet."
         headerIconPress={handlePlayingPress}
         isRefreshing={isRefreshing}
-        keyExtractor={(item) => item.show.id}
+        keyExtractor={(item) =>
+          isRateLimitItem(item) ? item.id : item.show.id
+        }
         onRefresh={handleRefresh}
         renderItem={renderShowItem}
         title="Podcasts"
@@ -236,7 +229,7 @@ export default function PodcastsScreen() {
       headerIconPress={handlePlayingPress}
       isLoadingMore={isLoadingMore}
       isRefreshing={isRefreshing}
-      keyExtractor={(item) => item.show.id}
+      keyExtractor={(item) => (isRateLimitItem(item) ? item.id : item.show.id)}
       onLoadMore={() => {
         if (nextUrl && !isLoadingMore) {
           fetchMore();
@@ -248,12 +241,3 @@ export default function PodcastsScreen() {
     />
   );
 }
-
-const tabStyles = StyleSheet.create({
-  rateLimitText: {
-    fontSize: n(16),
-    lineHeight: n(20),
-    textAlign: "center",
-    marginBottom: n(2),
-  },
-});

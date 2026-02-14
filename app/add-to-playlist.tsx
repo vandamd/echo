@@ -9,6 +9,7 @@ import ContentContainer from "@/shared/components/ContentContainer";
 import CustomScrollView from "@/shared/components/CustomScrollView";
 import { FallbackImage } from "@/shared/components/FallbackImage";
 import { HapticPressable } from "@/shared/components/HapticPressable";
+import { RateLimitListMessage } from "@/shared/components/RateLimitListMessage";
 import { StyledText } from "@/shared/components/StyledText";
 import { usePreventDoubleTap } from "@/shared/hooks/usePreventDoubleTap";
 import type { SpotifyPlaylist } from "@/shared/types/spotify";
@@ -183,11 +184,13 @@ export default function AddToPlaylistScreen() {
         style={{ paddingHorizontal: n(20), gap: 0 }}
       >
         <View style={styles.centeredMessageContainer}>
-          <StyledText
-            style={isRateLimited ? styles.rateLimitText : styles.emptyText}
-          >
-            {isRateLimited ? playlistRateLimitMessage : "No playlists found."}
-          </StyledText>
+          {isRateLimited ? (
+            <RateLimitListMessage message={playlistRateLimitMessage} />
+          ) : (
+            <StyledText style={styles.emptyText}>
+              No playlists found.
+            </StyledText>
+          )}
         </View>
       </ContentContainer>
     );
@@ -207,9 +210,7 @@ export default function AddToPlaylistScreen() {
           isRateLimited || !hideCreatePlaylist ? (
             <View>
               {isRateLimited && (
-                <StyledText style={styles.rateLimitText}>
-                  {playlistRateLimitMessage}
-                </StyledText>
+                <RateLimitListMessage message={playlistRateLimitMessage} />
               )}
               {!hideCreatePlaylist && (
                 <HapticPressable
@@ -279,12 +280,6 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: n(18),
     textAlign: "center",
-  },
-  rateLimitText: {
-    fontSize: n(16),
-    lineHeight: n(20),
-    textAlign: "center",
-    marginBottom: n(2),
   },
   itemContainer: {
     minHeight: n(50),

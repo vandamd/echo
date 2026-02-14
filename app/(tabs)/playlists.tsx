@@ -1,21 +1,31 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { View } from "react-native";
 import { PLAYLIST_DETAIL_KEY_PREFIX } from "@/constants/spotify";
 import { useAuth } from "@/features/auth";
 import { refreshPlaylistsFromCache } from "@/features/library";
 import { usePlaylistsStore } from "@/features/library/stores";
 import { useSettings } from "@/features/settings";
-import { ListScreen, MediaListItem, StyledText } from "@/shared/components";
+import {
+  ListScreen,
+  MediaListItem,
+  RateLimitListMessage,
+} from "@/shared/components";
 import { useNetworkState, usePreventDoubleTap } from "@/shared/hooks";
 import { tabScreenStyles as styles } from "@/shared/styles/detailScreen";
 import type { SpotifyPlaylist } from "@/shared/types/spotify";
-import { getRateLimitMessage, n } from "@/shared/utils";
+import type { WithRateLimitItem } from "@/shared/utils";
+import {
+  getRateLimitMessage,
+  isRateLimitItem,
+  prependRateLimitItem,
+} from "@/shared/utils";
 import { log, logError } from "@/shared/utils/logger";
 
 const CREATE_NEW_PLAYLIST_ID = "CREATE_NEW_PLAYLIST_ID";
-const RATE_LIMIT_MESSAGE_ID = "RATE_LIMIT_MESSAGE_ID";
+
+type PlaylistListItem = WithRateLimitItem<SpotifyPlaylist>;
 
 export default function PlaylistsScreen() {
   const { isLoading, user } = useAuth();
@@ -138,13 +148,9 @@ export default function PlaylistsScreen() {
     }
   );
 
-  const renderPlaylistItem = ({ item }: { item: SpotifyPlaylist }) => {
-    if (item.id === RATE_LIMIT_MESSAGE_ID) {
-      return (
-        <StyledText style={playlistStyles.rateLimitText}>
-          {item.name}
-        </StyledText>
-      );
+  const renderPlaylistItem = ({ item }: { item: PlaylistListItem }) => {
+    if (isRateLimitItem(item)) {
+      return <RateLimitListMessage message={item.message} />;
     }
 
     if (item.id === CREATE_NEW_PLAYLIST_ID) {
@@ -209,27 +215,16 @@ export default function PlaylistsScreen() {
     uri: "",
     href: "",
   };
-  const rateLimitMessageItem: SpotifyPlaylist = {
-    id: RATE_LIMIT_MESSAGE_ID,
-    name: playlistRateLimitMessage,
-    images: [],
-    owner: { display_name: "", id: "" },
-    description: "",
-    items: { href: "", total: 0 },
-    public: false,
-    collaborative: false,
-    uri: "",
-    href: "",
-  };
-
   const withCreate = sortedPlaylists
     ? [createNewPlaylistItem, ...sortedPlaylists]
     : [createNewPlaylistItem];
   const withoutCreate: SpotifyPlaylist[] = sortedPlaylists ?? [];
   const basePlaylists = hideCreatePlaylist ? withoutCreate : withCreate;
-  const displayPlaylists = isRateLimited
-    ? [rateLimitMessageItem, ...basePlaylists]
-    : basePlaylists;
+  const displayPlaylists: PlaylistListItem[] = prependRateLimitItem(
+    basePlaylists,
+    isRateLimited,
+    playlistRateLimitMessage
+  );
 
   const handleLoadMore = () => {
     if (isOnline && nextUrl && !isLoadingMore) {
@@ -253,12 +248,3 @@ export default function PlaylistsScreen() {
     />
   );
 }
-
-const playlistStyles = StyleSheet.create({
-  rateLimitText: {
-    fontSize: n(16),
-    lineHeight: n(20),
-    textAlign: "center",
-    marginBottom: n(2),
-  },
-});

@@ -8,6 +8,7 @@ export { ListFooter } from "./ListFooter";
 export { ListScreen } from "./ListScreen";
 export { MediaListItem } from "./MediaListItem";
 export { Navbar } from "./Navbar";
+export { RateLimitListMessage } from "./RateLimitListMessage";
 export { StyledButton } from "./StyledButton";
 export { StyledText } from "./StyledText";
 export { ToggleSwitch } from "./ToggleSwitch";

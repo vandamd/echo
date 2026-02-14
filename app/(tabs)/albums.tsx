@@ -1,26 +1,32 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { View } from "react-native";
 import { ALBUM_DETAIL_KEY_PREFIX } from "@/constants/spotify";
 import { useAuth } from "@/features/auth";
 import {
   refreshSavedAlbumsFromCache,
   useAlbumsStore,
 } from "@/features/library";
-import { ListScreen, MediaListItem, StyledText } from "@/shared/components";
+import {
+  ListScreen,
+  MediaListItem,
+  RateLimitListMessage,
+} from "@/shared/components";
 import { useNetworkState, usePreventDoubleTap } from "@/shared/hooks";
 import { tabScreenStyles as styles } from "@/shared/styles/detailScreen";
 import type { SpotifySavedAlbum } from "@/shared/types/spotify";
+import type { WithRateLimitItem } from "@/shared/utils";
 import {
   getArtistNames,
   getRateLimitMessage,
+  isRateLimitItem,
   log,
   logError,
-  n,
+  prependRateLimitItem,
 } from "@/shared/utils";
 
-const RATE_LIMIT_MESSAGE_ID = "RATE_LIMIT_MESSAGE_ID";
+type AlbumsListItem = WithRateLimitItem<SpotifySavedAlbum>;
 
 export default function AlbumsScreen() {
   const { isLoading } = useAuth();
@@ -134,13 +140,9 @@ export default function AlbumsScreen() {
     router.push("/playing");
   });
 
-  const renderAlbumItem = ({ item }: { item: SpotifySavedAlbum }) => {
-    if (item.album.id === RATE_LIMIT_MESSAGE_ID) {
-      return (
-        <StyledText style={tabStyles.rateLimitText}>
-          {item.album.name}
-        </StyledText>
-      );
+  const renderAlbumItem = ({ item }: { item: AlbumsListItem }) => {
+    if (isRateLimitItem(item)) {
+      return <RateLimitListMessage message={item.message} />;
     }
 
     const isOffline = !isOnline;
@@ -176,26 +178,11 @@ export default function AlbumsScreen() {
     }
   };
 
-  const rateLimitMessageItem: SpotifySavedAlbum = {
-    added_at: "",
-    album: {
-      album_type: "album",
-      total_tracks: 0,
-      external_urls: { spotify: "" },
-      href: "",
-      id: RATE_LIMIT_MESSAGE_ID,
-      images: [],
-      name: albumRateLimitMessage,
-      release_date: "",
-      release_date_precision: "day",
-      type: "album",
-      uri: "",
-      artists: [],
-    },
-  };
-  const displayAlbums = isRateLimited
-    ? [rateLimitMessageItem, ...(sortedAlbums ?? [])]
-    : sortedAlbums;
+  const displayAlbums: AlbumsListItem[] | null = prependRateLimitItem(
+    sortedAlbums,
+    isRateLimited,
+    albumRateLimitMessage
+  );
 
   return (
     <ListScreen
@@ -205,7 +192,7 @@ export default function AlbumsScreen() {
       isLoadingMore={isLoadingMore}
       isOnline={isOnline}
       isRefreshing={isRefreshing}
-      keyExtractor={(item) => item.album.id}
+      keyExtractor={(item) => (isRateLimitItem(item) ? item.id : item.album.id)}
       onLoadMore={handleLoadMore}
       onRefresh={handleRefresh}
       renderItem={renderAlbumItem}
@@ -213,12 +200,3 @@ export default function AlbumsScreen() {
     />
   );
 }
-
-const tabStyles = StyleSheet.create({
-  rateLimitText: {
-    fontSize: n(16),
-    lineHeight: n(20),
-    textAlign: "center",
-    marginBottom: n(2),
-  },
-});
