@@ -1,6 +1,5 @@
 export {
   useAlbumsStore,
-  useArtistsStore,
   usePlaylistsStore,
   usePodcastsStore,
   useSavedEpisodesStore,

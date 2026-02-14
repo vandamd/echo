@@ -105,7 +105,6 @@ interface SettingsContextType {
 
 interface StoredTabPreferences {
   showLikedSongs?: boolean;
-  showArtists?: boolean;
   showAlbums?: boolean;
   showPodcasts?: boolean;
   showPlaylists?: boolean;

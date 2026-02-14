@@ -2,7 +2,6 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   ALBUM_DETAIL_KEY_PREFIX,
   ALBUMS_KEY,
-  ARTISTS_KEY,
   PLAYLIST_DETAIL_KEY_PREFIX,
   PLAYLISTS_KEY,
   PODCASTS_KEY,
@@ -13,7 +12,6 @@ import {
 import type {
   SavedTrackObject,
   SpotifyAlbum,
-  SpotifyArtist,
   SpotifyPlaylist,
   SpotifyPlaylistFull,
   SpotifySavedAlbum,
@@ -27,13 +25,14 @@ import {
   parsePlaylists,
 } from "@/shared/utils/normalize-playlist";
 
+const LEGACY_ARTISTS_KEY = "spotifyArtists";
+
 export const loadCachedData = async () => {
   try {
     const keys = [
       PLAYLISTS_KEY,
       ALBUMS_KEY,
       PODCASTS_KEY,
-      ARTISTS_KEY,
       SAVED_TRACKS_KEY,
       SAVED_EPISODES_KEY,
     ];
@@ -49,14 +48,11 @@ export const loadCachedData = async () => {
       podcasts: results[2][1]
         ? (JSON.parse(results[2][1]) as SpotifySavedShow[])
         : null,
-      artists: results[3][1]
-        ? (JSON.parse(results[3][1]) as SpotifyArtist[])
+      savedTracks: results[3][1]
+        ? (JSON.parse(results[3][1]) as SavedTrackObject[])
         : null,
-      savedTracks: results[4][1]
-        ? (JSON.parse(results[4][1]) as SavedTrackObject[])
-        : null,
-      savedEpisodes: results[5][1]
-        ? (JSON.parse(results[5][1]) as SpotifySavedEpisode[])
+      savedEpisodes: results[4][1]
+        ? (JSON.parse(results[4][1]) as SpotifySavedEpisode[])
         : null,
     };
 
@@ -75,7 +71,6 @@ export const loadCachedData = async () => {
       playlists: null,
       albums: null,
       podcasts: null,
-      artists: null,
       savedTracks: null,
       savedEpisodes: null,
     };
@@ -85,7 +80,6 @@ export const loadCachedData = async () => {
 export interface SaveCachedDataOptions {
   playlists?: SpotifyPlaylist[];
   albums?: SpotifySavedAlbum[];
-  artists?: SpotifyArtist[];
   tracks?: SavedTrackObject[];
   podcasts?: SpotifySavedShow[];
   savedEpisodes?: SpotifySavedEpisode[];
@@ -107,9 +101,6 @@ export const saveCachedData = async (options: SaveCachedDataOptions) => {
     if (options.podcasts) {
       pairs.push([PODCASTS_KEY, JSON.stringify(options.podcasts)]);
     }
-    if (options.artists) {
-      pairs.push([ARTISTS_KEY, JSON.stringify(options.artists)]);
-    }
     if (options.tracks) {
       pairs.push([SAVED_TRACKS_KEY, JSON.stringify(options.tracks)]);
     }
@@ -130,7 +121,7 @@ export const clearCachedData = async () => {
       PLAYLISTS_KEY,
       ALBUMS_KEY,
       PODCASTS_KEY,
-      ARTISTS_KEY,
+      LEGACY_ARTISTS_KEY,
       SAVED_TRACKS_KEY,
       SAVED_EPISODES_KEY,
     ]);
@@ -174,22 +165,6 @@ export const refreshPlaylistsFromCache = async () => {
     }
   } catch (error) {
     logError("Cache: Error refreshing playlists from cache:", error);
-  }
-  return null;
-};
-
-export const refreshFollowedArtistsFromCache = async () => {
-  try {
-    const cachedFollowedArtists = await AsyncStorage.getItem(ARTISTS_KEY);
-    if (cachedFollowedArtists) {
-      const parsedArtists = JSON.parse(cachedFollowedArtists);
-      log(
-        `Cache: Refreshed followed artists state from cache - ${parsedArtists.length} artists`
-      );
-      return parsedArtists;
-    }
-  } catch (error) {
-    logError("Cache: Error refreshing followed artists from cache:", error);
   }
   return null;
 };

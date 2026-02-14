@@ -20,7 +20,6 @@ import {
 } from "@/constants/spotify";
 import { useCredentials } from "@/features/credentials";
 import { useAlbumsStore } from "@/features/library/stores/useAlbumsStore";
-import { useArtistsStore } from "@/features/library/stores/useArtistsStore";
 import { usePlaylistsStore } from "@/features/library/stores/usePlaylistsStore";
 import { usePodcastsStore } from "@/features/library/stores/usePodcastsStore";
 import { useSavedEpisodesStore } from "@/features/library/stores/useSavedEpisodesStore";
@@ -110,7 +109,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const handleLibraryCleanup = useCallback(async () => {
     await clearCachedData();
     useAlbumsStore.getState().reset();
-    useArtistsStore.getState().reset();
     usePlaylistsStore.getState().reset();
     usePodcastsStore.getState().reset();
     useSavedEpisodesStore.getState().reset();

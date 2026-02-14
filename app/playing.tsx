@@ -490,8 +490,6 @@ export default function PlayingScreen() {
   const canNavigateToShow = isEpisode && isOnline && !!currentEpisode?.show?.id;
   const canNavigateToAlbum =
     !isEpisode && isOnline && !!currentTrack?.album?.id;
-  const canNavigateToArtist =
-    !isEpisode && isOnline && !!currentTrack && currentTrack.artists.length > 0;
 
   const visibleButtonCount = [
     !hideLikeButton,
@@ -539,15 +537,6 @@ export default function PlayingScreen() {
           showName: currentEpisode.show.name as string,
         },
       } as never);
-    } else if (currentTrack && currentTrack.artists.length > 0) {
-      const artist = currentTrack.artists[0];
-      router.push({
-        pathname: "/artist/[id]",
-        params: {
-          id: artist.id,
-          artistName: artist.name as string,
-        },
-      });
     }
   });
 
@@ -646,7 +635,7 @@ export default function PlayingScreen() {
               </MarqueeText>
             </HapticPressable>
             <HapticPressable
-              disabled={!(isEpisode ? canNavigateToShow : canNavigateToArtist)}
+              disabled={!canNavigateToShow}
               onPress={handleSubtitlePress}
             >
               <StyledText numberOfLines={1} style={styles.artistName}>

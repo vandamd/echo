@@ -72,35 +72,6 @@ export interface SpotifyAlbum {
   tracks?: SpotifyAlbumTracks;
 }
 
-export interface SpotifyArtist {
-  external_urls: { spotify: string };
-  genres: string[];
-  href: string;
-  id: string;
-  images: SpotifyImage[];
-  name: string;
-  type: "artist";
-  uri: string;
-}
-
-export interface SpotifyArtists {
-  href: string;
-  limit: number;
-  next: string | null;
-  cursors: Cursor;
-  total: number;
-  items: SpotifyArtist[];
-}
-
-export interface Cursor {
-  after: string;
-  before: string;
-}
-
-export interface SpotifyFollowedArtistsResponse {
-  artists: SpotifyArtists;
-}
-
 export interface SpotifyAlbumTracks
   extends SpotifyPaginatedResponse<SpotifyTrackSimple> {
   uri: string;
@@ -130,9 +101,6 @@ export interface SpotifySavedAlbum {
 
 export type SpotifySavedAlbumsResponse =
   SpotifyPaginatedResponse<SpotifySavedAlbum>;
-
-export type SpotifyArtistAlbumsResponse =
-  SpotifyPaginatedResponse<SpotifyAlbumSimple>;
 
 export interface SavedTrackObject {
   added_at: string;
@@ -321,7 +289,6 @@ export interface SpotifyPlaylistFull extends SpotifyPlaylist {
 export interface SpotifySearchResults {
   tracks?: SpotifyPaginatedResponse<SpotifyTrack>;
   albums?: SpotifyPaginatedResponse<SpotifyAlbumSimple>;
-  artists?: SpotifyPaginatedResponse<SpotifyArtist>;
   playlists?: SpotifyPaginatedResponse<SpotifyPlaylistSimple>;
   shows?: SpotifyPaginatedResponse<SpotifyShow>;
 }

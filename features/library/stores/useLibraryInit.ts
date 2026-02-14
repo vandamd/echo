@@ -4,7 +4,6 @@ import { useNetworkState } from "@/shared/hooks";
 import { logInfo } from "@/shared/utils/logger";
 import { loadCachedData } from "../utils/cache";
 import { useAlbumsStore } from "./useAlbumsStore";
-import { useArtistsStore } from "./useArtistsStore";
 import { usePlaylistsStore } from "./usePlaylistsStore";
 import { usePodcastsStore } from "./usePodcastsStore";
 import { useSavedEpisodesStore } from "./useSavedEpisodesStore";
@@ -27,7 +26,6 @@ export const useLibraryInit = () => {
       usePlaylistsStore.getState().setPlaylists(cached.playlists);
       useAlbumsStore.getState().setAlbums(cached.albums);
       usePodcastsStore.getState().setPodcasts(cached.podcasts);
-      useArtistsStore.getState().setArtists(cached.artists);
       useSavedTracksStore.getState().setSavedTracks(cached.savedTracks);
       useSavedEpisodesStore.getState().setSavedEpisodes(cached.savedEpisodes);
     };
@@ -55,7 +53,6 @@ export const useLibraryInit = () => {
       usePlaylistsStore.getState().fetch({ showRefreshing: false }),
       useAlbumsStore.getState().fetch({ showRefreshing: false }),
       usePodcastsStore.getState().fetch({ showRefreshing: false }),
-      useArtistsStore.getState().fetch({ showRefreshing: false }),
       useSavedTracksStore.getState().fetch({ showRefreshing: false }),
     ]).then(() => {
       initialFetchDone.current = true;

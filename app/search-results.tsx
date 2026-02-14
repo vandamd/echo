@@ -14,7 +14,6 @@ import { useNetworkState } from "@/shared/hooks/useNetworkState";
 import { usePreventDoubleTap } from "@/shared/hooks/usePreventDoubleTap";
 import type {
   SpotifyAlbumSimple,
-  SpotifyArtist,
   SpotifyImage,
   SpotifyPlaylistSimple,
   SpotifySearchResults,
@@ -29,7 +28,6 @@ type SearchItem =
   | { type: "track"; data: SpotifyTrack }
   | { type: "playlist"; data: SpotifyPlaylistSimple }
   | { type: "album"; data: SpotifyAlbumSimple }
-  | { type: "artist"; data: SpotifyArtist }
   | { type: "podcast"; data: SpotifyShow };
 
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: search result collection with validation
@@ -55,18 +53,6 @@ function collectSearchResults(apiResponse: SpotifySearchResults): SearchItem[] {
         console.warn(
           "Search result album is missing an id or is invalid:",
           album
-        );
-      }
-    }
-  }
-  if (apiResponse.artists?.items) {
-    for (const artist of apiResponse.artists.items) {
-      if (artist?.id) {
-        newResults.push({ type: "artist", data: artist });
-      } else if (artist) {
-        console.warn(
-          "Search result artist is missing an id or is invalid:",
-          artist
         );
       }
     }
@@ -137,7 +123,7 @@ export default function SearchResultsScreen() {
 
       searchItems(
         routeQuery,
-        ["track", "album", "playlist", "artist", "show"],
+        ["track", "album", "playlist", "show"],
         accessToken,
         ensureValidToken
       )
@@ -200,14 +186,6 @@ export default function SearchResultsScreen() {
             }),
           },
         } as never);
-      } else if (item.type === "artist") {
-        router.push({
-          pathname: `/artist/${item.data.id}`,
-          params: {
-            artistName: item.data.name as string,
-            artistString: JSON.stringify(item.data),
-          },
-        } as never);
       } else if (item.type === "playlist") {
         router.push({
           pathname: `/playlist/${item.data.id}`,
@@ -247,12 +225,6 @@ export default function SearchResultsScreen() {
         images = item.data.images;
         itemUri = item.data.uri;
         break;
-      case "artist":
-        title = item.data.name;
-        subtitle = "Artist";
-        images = item.data.images;
-        itemUri = item.data.uri;
-        break;
       case "playlist":
         title = item.data.name;
         subtitle = `Playlist \u2022 ${item.data.owner?.display_name || "Playlist"}`;
@@ -278,10 +250,7 @@ export default function SearchResultsScreen() {
           <FallbackImage
             placeholderIconSize={n(24)}
             placeholderText="?"
-            style={[
-              styles.itemImage,
-              { borderRadius: item.type === "artist" ? n(50) : 0 },
-            ]}
+            style={styles.itemImage}
             uri={images && images.length > 0 ? images[0].url : undefined}
           />
         )}
