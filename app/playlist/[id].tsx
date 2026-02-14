@@ -108,8 +108,12 @@ export default function PlaylistDetailScreen() {
       return;
     }
 
-    const hasInitialData = hasLoadedPlaylistItems(initialPlaylist);
-    let cachedPlaylistWithItems: SpotifyPlaylistFull | null = null;
+    const initialPlaylistWithItems = hasLoadedPlaylistItems(initialPlaylist)
+      ? initialPlaylist
+      : null;
+    const hasInitialData = initialPlaylistWithItems !== null;
+    let cachedPlaylistWithItems: SpotifyPlaylistFull | null =
+      initialPlaylistWithItems;
     let hasDisplayedData = hasInitialData;
 
     try {
