@@ -145,6 +145,8 @@ export default function LikedSongsScreen() {
 
     const isDisabled = !isOnline;
 
+    const trackIndex = isRateLimited ? index - 1 : index;
+
     return (
       <MediaListItem
         disabled={isDisabled}
@@ -153,7 +155,7 @@ export default function LikedSongsScreen() {
             ? item.track.album.images[0].url
             : undefined
         }
-        onPress={() => handleTrackPress(item, index, isDisabled)}
+        onPress={() => handleTrackPress(item, trackIndex, isDisabled)}
         placeholderIcon="music-note"
         primaryText={item.track.name}
         secondaryText={getArtistNames(item.track.artists)}
