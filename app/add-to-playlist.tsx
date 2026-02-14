@@ -36,15 +36,12 @@ export default function AddToPlaylistScreen() {
     }
   }, [accessToken, user, playlists, fetchPlaylists, isLoading]);
 
-  const ownedPlaylists = useMemo(
-    () =>
-      playlists
-        ? playlists.filter((playlist) =>
-            user?.id ? playlist.owner.id === user.id : false
-          )
-        : null,
-    [playlists, user?.id]
-  );
+  const ownedPlaylists = useMemo(() => {
+    if (!(playlists && user?.id)) {
+      return null;
+    }
+    return playlists.filter((playlist) => playlist.owner.id === user.id);
+  }, [playlists, user?.id]);
 
   const sortedPlaylists = useMemo(
     () =>
@@ -166,7 +163,9 @@ export default function AddToPlaylistScreen() {
     );
   };
 
-  if (isLoading && !sortedPlaylists) {
+  const isUserPending = Boolean(accessToken) && !user?.id;
+
+  if ((isLoading || isUserPending) && !sortedPlaylists) {
     return (
       <ContentContainer
         headerTitle="Add to playlist"

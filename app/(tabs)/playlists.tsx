@@ -28,7 +28,7 @@ const CREATE_NEW_PLAYLIST_ID = "CREATE_NEW_PLAYLIST_ID";
 type PlaylistListItem = WithRateLimitItem<SpotifyPlaylist>;
 
 export default function PlaylistsScreen() {
-  const { isLoading, user } = useAuth();
+  const { accessToken, isLoading, user } = useAuth();
   const playlists = usePlaylistsStore((s) => s.playlists);
   const fetchPlaylists = usePlaylistsStore((s) => s.fetch);
   const isRefreshing = usePlaylistsStore((s) => s.isRefreshing);
@@ -51,15 +51,12 @@ export default function PlaylistsScreen() {
 
   const playlistSource = playlists ?? offlinePlaylists;
 
-  const ownedPlaylists = useMemo(
-    () =>
-      playlistSource
-        ? playlistSource.filter((playlist) =>
-            user?.id ? playlist.owner.id === user.id : false
-          )
-        : null,
-    [playlistSource, user?.id]
-  );
+  const ownedPlaylists = useMemo(() => {
+    if (!(playlistSource && user?.id)) {
+      return null;
+    }
+    return playlistSource.filter((playlist) => playlist.owner.id === user.id);
+  }, [playlistSource, user?.id]);
   const sortedPlaylists = useMemo(
     () =>
       ownedPlaylists
@@ -195,7 +192,9 @@ export default function PlaylistsScreen() {
     router.push("/playing");
   });
 
-  if (isLoading && !sortedPlaylists) {
+  const isUserPending = Boolean(accessToken) && !user?.id;
+
+  if ((isLoading || isUserPending) && !sortedPlaylists) {
     return <View style={styles.centeredMessageContainer} />;
   }
 
