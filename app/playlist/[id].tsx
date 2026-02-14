@@ -51,7 +51,7 @@ export default function PlaylistDetailScreen() {
     playlistString?: string;
     playlistName?: string;
   }>();
-  const { user, ensureValidToken } = useAuth();
+  const { user } = useAuth();
   const { skipToIndex } = usePlayback();
   const { showPlaylistTrackCovers } = useSettings();
   const router = useRouter();
@@ -162,33 +162,21 @@ export default function PlaylistDetailScreen() {
           let itemsFetchFailed = false;
 
           if (!hasLoadedPlaylistItems(playlistData)) {
-            const token = await ensureValidToken();
+            const itemsResult = await apiGetWithStatus<unknown>(
+              `https://api.spotify.com/v1/playlists/${id}/items?limit=50`
+            );
 
-            if (token) {
-              const itemsResponse = await fetch(
-                `https://api.spotify.com/v1/playlists/${id}/items?limit=50`,
-                {
-                  headers: {
-                    Authorization: `Bearer ${token}`,
-                  },
-                }
-              );
-
-              if (itemsResponse.ok) {
-                const rawItems = (await itemsResponse.json()) as unknown;
-                const playlistItems = parsePlaylistItems(rawItems);
-                if (playlistItems) {
-                  playlistData = { ...playlistData, items: playlistItems };
-                } else {
-                  itemsFetchFailed = true;
-                }
-              } else if (itemsResponse.status === 429) {
-                itemsRateLimited = true;
-              } else if (itemsResponse.status === 403) {
-                itemsUnavailable = true;
+            if (itemsResult.data) {
+              const playlistItems = parsePlaylistItems(itemsResult.data);
+              if (playlistItems) {
+                playlistData = { ...playlistData, items: playlistItems };
               } else {
                 itemsFetchFailed = true;
               }
+            } else if (itemsResult.status === 429) {
+              itemsRateLimited = true;
+            } else if (itemsResult.status === 403) {
+              itemsUnavailable = true;
             } else {
               itemsFetchFailed = true;
             }
@@ -241,7 +229,7 @@ export default function PlaylistDetailScreen() {
     } finally {
       setIsInitialLoading(false);
     }
-  }, [id, initialPlaylist, isOnline, ensureValidToken]);
+  }, [id, initialPlaylist, isOnline]);
 
   useFocusEffect(
     useCallback(() => {
