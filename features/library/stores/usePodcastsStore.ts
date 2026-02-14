@@ -146,8 +146,9 @@ export const usePodcastsStore = create<PodcastsState>()((set, get) => ({
     } catch (error) {
       logError("Error checking cached podcasts:", error);
     }
+    const uri = encodeURIComponent(`spotify:show:${showId}`);
     const data = await apiGet<boolean[]>(
-      `https://api.spotify.com/v1/me/shows/contains?ids=${showId}`
+      `https://api.spotify.com/v1/me/library/contains?uris=${uri}`
     );
     return data ? (data[0] ?? false) : false;
   },

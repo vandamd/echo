@@ -144,8 +144,9 @@ export const useAlbumsStore = create<AlbumsState>()((set, get) => ({
     } catch (error) {
       logError("Error checking cached albums:", error);
     }
+    const uri = encodeURIComponent(`spotify:album:${albumId}`);
     const data = await apiGet<boolean[]>(
-      `https://api.spotify.com/v1/me/albums/contains?ids=${albumId}`
+      `https://api.spotify.com/v1/me/library/contains?uris=${uri}`
     );
     return data ? (data[0] ?? false) : false;
   },

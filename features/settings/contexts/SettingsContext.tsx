@@ -59,7 +59,7 @@ export interface TabPreferences {
 
 const defaultTabPreferences: TabPreferences = {
   showLikedSongs: true,
-  showArtists: true,
+  showArtists: false,
   showAlbums: true,
   showPodcasts: true,
   showPlaylists: true,

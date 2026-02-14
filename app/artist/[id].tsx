@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { useAuth } from "@/features/auth";
 import { useArtistsStore } from "@/features/library/stores";
@@ -15,6 +15,7 @@ import {
   usePreventDoubleTap,
   useSaveStatus,
 } from "@/shared/hooks";
+import { detailScreenStyles } from "@/shared/styles/detailScreen";
 import type { SpotifyAlbumSimple, SpotifyArtist } from "@/shared/types/spotify";
 import { log, logError, n } from "@/shared/utils";
 import { apiGet } from "@/shared/utils/api-client";
@@ -31,8 +32,13 @@ const AlbumItemSeparator = ({
 };
 
 type ArtistDetailItem =
+  | { type: "warning"; message: string }
   | { type: "header"; title: string }
   | { type: "album"; data: SpotifyAlbumSimple; index: number };
+
+const LOAD_MORE_COOLDOWN_MS = 1200;
+const RATE_LIMIT_MESSAGE =
+  "Spotify has reduced artist album limits. If you follow artists with large catalogues, this page may not load all albums.";
 
 export default function ArtistDetailScreen() {
   const { id, artistString, artistName } = useLocalSearchParams<{
@@ -70,6 +76,8 @@ export default function ArtistDetailScreen() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [hasConfirmedContent, setHasConfirmedContent] = useState(false);
+  const [rateLimitMessage, setRateLimitMessage] = useState<string | null>(null);
+  const nextLoadAllowedAtRef = useRef<number>(0);
 
   const artist = fetchedArtist ?? initialArtist;
   const displayName = artist?.name ?? artistName ?? "Artist";
@@ -92,10 +100,23 @@ export default function ArtistDetailScreen() {
       return;
     }
 
+    const now = Date.now();
+    if (now < nextLoadAllowedAtRef.current) {
+      return;
+    }
+
+    nextLoadAllowedAtRef.current = now + LOAD_MORE_COOLDOWN_MS;
     setIsLoadingMore(true);
     try {
-      const { albums: newAlbums, nextUrl } =
-        await fetchMoreArtistAlbums(albumsNextUrl);
+      const {
+        albums: newAlbums,
+        nextUrl,
+        isRateLimited,
+      } = await fetchMoreArtistAlbums(albumsNextUrl);
+      if (isRateLimited) {
+        setRateLimitMessage(RATE_LIMIT_MESSAGE);
+        return;
+      }
       if (newAlbums) {
         setAlbums((prevAlbums) => [...(prevAlbums || []), ...newAlbums]);
         setAlbumsNextUrl(nextUrl);
@@ -109,6 +130,7 @@ export default function ArtistDetailScreen() {
 
   useEffect(() => {
     setHasConfirmedContent(false);
+    setRateLimitMessage(null);
 
     if (!id) {
       setError("Artist ID is missing.");
@@ -156,6 +178,10 @@ export default function ArtistDetailScreen() {
     const fetchAlbumsData = async () => {
       try {
         const data = await fetchArtistAlbums(id);
+        if (data.isRateLimited) {
+          setRateLimitMessage(RATE_LIMIT_MESSAGE);
+          return;
+        }
         setAlbums(data.albums);
         setAlbumsNextUrl(data.nextUrl);
       } catch (e: unknown) {
@@ -180,6 +206,9 @@ export default function ArtistDetailScreen() {
   );
 
   const artistDetailList: ArtistDetailItem[] = [
+    ...(rateLimitMessage
+      ? [{ type: "warning" as const, message: rateLimitMessage }]
+      : []),
     ...(artistAlbums.length > 0
       ? [
           { type: "header" as const, title: "Albums" },
@@ -204,6 +233,9 @@ export default function ArtistDetailScreen() {
 
   const renderSectionHeader = (title: string) => (
     <StyledText style={styles.sectionTitle}>{title}</StyledText>
+  );
+  const renderWarning = (message: string) => (
+    <StyledText style={detailScreenStyles.emptyText}>{message}</StyledText>
   );
 
   const handleAlbumPress = usePreventDoubleTap((albumId: string) => {
@@ -246,6 +278,9 @@ export default function ArtistDetailScreen() {
   };
 
   const renderItem = ({ item }: { item: ArtistDetailItem }) => {
+    if (item.type === "warning") {
+      return renderWarning(item.message);
+    }
     if (item.type === "header") {
       return renderSectionHeader(item.title);
     }
@@ -256,6 +291,9 @@ export default function ArtistDetailScreen() {
   };
 
   const keyExtractor = (item: ArtistDetailItem, index: number) => {
+    if (item.type === "warning") {
+      return `warning-${index}`;
+    }
     if (item.type === "header") {
       return `header-${item.title}-${index}`;
     }

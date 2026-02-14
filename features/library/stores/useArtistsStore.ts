@@ -7,7 +7,12 @@ import type {
   SpotifyFollowedArtistsResponse,
   SpotifyPaginatedResponse,
 } from "@/shared/types/spotify";
-import { apiDelete, apiGet, apiPut } from "@/shared/utils/api-client";
+import {
+  apiDelete,
+  apiGet,
+  apiGetWithStatus,
+  apiPut,
+} from "@/shared/utils/api-client";
 import { log, logError } from "@/shared/utils/logger";
 import { saveCachedData } from "../utils/cache";
 
@@ -22,12 +27,16 @@ interface ArtistsState {
   followArtist: (artistId: string) => Promise<boolean>;
   unfollowArtist: (artistId: string) => Promise<boolean>;
   checkIfFollowing: (artistId: string) => Promise<boolean>;
-  fetchArtistAlbums: (
-    artistId: string
-  ) => Promise<{ albums: SpotifyAlbumSimple[] | null; nextUrl: string | null }>;
-  fetchMoreArtistAlbums: (
-    nextUrl: string | null
-  ) => Promise<{ albums: SpotifyAlbumSimple[] | null; nextUrl: string | null }>;
+  fetchArtistAlbums: (artistId: string) => Promise<{
+    albums: SpotifyAlbumSimple[] | null;
+    nextUrl: string | null;
+    isRateLimited: boolean;
+  }>;
+  fetchMoreArtistAlbums: (nextUrl: string | null) => Promise<{
+    albums: SpotifyAlbumSimple[] | null;
+    nextUrl: string | null;
+    isRateLimited: boolean;
+  }>;
   setArtists: (artists: SpotifyArtist[] | null) => void;
   reset: () => void;
 }
@@ -144,32 +153,49 @@ export const useArtistsStore = create<ArtistsState>()((set, get) => ({
     } catch (error) {
       logError("Error checking cached artists:", error);
     }
+    const uri = encodeURIComponent(`spotify:artist:${artistId}`);
     const data = await apiGet<boolean[]>(
-      `https://api.spotify.com/v1/me/following/contains?type=artist&ids=${artistId}`
+      `https://api.spotify.com/v1/me/library/contains?uris=${uri}`
     );
     return data ? (data[0] ?? false) : false;
   },
 
   fetchArtistAlbums: async (artistId: string) => {
-    const data = await apiGet<SpotifyPaginatedResponse<SpotifyAlbumSimple>>(
-      `https://api.spotify.com/v1/artists/${artistId}/albums?limit=50`
-    );
-    if (data) {
-      return { albums: data.items, nextUrl: data.next };
+    const result = await apiGetWithStatus<
+      SpotifyPaginatedResponse<SpotifyAlbumSimple>
+    >(`https://api.spotify.com/v1/artists/${artistId}/albums?limit=10`);
+    if (result.data) {
+      return {
+        albums: result.data.items,
+        nextUrl: result.data.next,
+        isRateLimited: false,
+      };
     }
-    return { albums: [], nextUrl: null };
+    if (result.status === 429) {
+      return { albums: null, nextUrl: null, isRateLimited: true };
+    }
+    return { albums: [], nextUrl: null, isRateLimited: false };
   },
 
   fetchMoreArtistAlbums: async (nextUrl: string | null) => {
     if (!nextUrl) {
-      return { albums: null, nextUrl: null };
+      return { albums: null, nextUrl: null, isRateLimited: false };
     }
-    const data =
-      await apiGet<SpotifyPaginatedResponse<SpotifyAlbumSimple>>(nextUrl);
-    if (data) {
-      return { albums: data.items, nextUrl: data.next };
+    const result =
+      await apiGetWithStatus<SpotifyPaginatedResponse<SpotifyAlbumSimple>>(
+        nextUrl
+      );
+    if (result.data) {
+      return {
+        albums: result.data.items,
+        nextUrl: result.data.next,
+        isRateLimited: false,
+      };
     }
-    return { albums: null, nextUrl: null };
+    if (result.status === 429) {
+      return { albums: null, nextUrl, isRateLimited: true };
+    }
+    return { albums: null, nextUrl: null, isRateLimited: false };
   },
 
   setArtists: (artists) => set({ artists }),

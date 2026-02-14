@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import type { SpotifyPlaylist } from "@/shared/types/spotify";
-import { apiGet, apiPost } from "@/shared/utils/api-client";
+import { apiGetWithStatus, apiPost } from "@/shared/utils/api-client";
 import { logError } from "@/shared/utils/logger";
 import { parsePlaylistsPage } from "@/shared/utils/normalize-playlist";
 import { saveCachedData } from "../utils/cache";
@@ -11,6 +11,7 @@ interface PlaylistsState {
   isRefreshing: boolean;
   isFetching: boolean;
   isLoadingMore: boolean;
+  isRateLimited: boolean;
   fetch: (options?: { showRefreshing?: boolean }) => Promise<void>;
   fetchMore: () => Promise<void>;
   addTrackToPlaylist: (
@@ -27,6 +28,7 @@ export const usePlaylistsStore = create<PlaylistsState>()((set, get) => ({
   isRefreshing: false,
   isFetching: false,
   isLoadingMore: false,
+  isRateLimited: false,
 
   fetch: async (options) => {
     const showRefreshing = options?.showRefreshing ?? true;
@@ -36,15 +38,21 @@ export const usePlaylistsStore = create<PlaylistsState>()((set, get) => ({
       set({ isFetching: true });
     }
     try {
-      const raw = await apiGet<unknown>(
+      const result = await apiGetWithStatus<unknown>(
         "https://api.spotify.com/v1/me/playlists?limit=50"
       );
-      const data = raw ? parsePlaylistsPage(raw) : null;
+      const data = result.data ? parsePlaylistsPage(result.data) : null;
       if (data) {
-        set({ playlists: data.items, nextUrl: data.next });
+        set({
+          playlists: data.items,
+          nextUrl: data.next,
+          isRateLimited: false,
+        });
         await saveCachedData({ playlists: data.items });
+      } else if (result.status === 429) {
+        set({ isRateLimited: true });
       } else if (get().playlists === null) {
-        set({ playlists: [], nextUrl: null });
+        set({ playlists: [], nextUrl: null, isRateLimited: false });
       }
     } finally {
       if (showRefreshing) {
@@ -61,13 +69,16 @@ export const usePlaylistsStore = create<PlaylistsState>()((set, get) => ({
       return;
     }
     set({ isLoadingMore: true });
-    const raw = await apiGet<unknown>(nextUrl);
-    const data = raw ? parsePlaylistsPage(raw) : null;
+    const result = await apiGetWithStatus<unknown>(nextUrl);
+    const data = result.data ? parsePlaylistsPage(result.data) : null;
     if (data) {
       set((state) => ({
         playlists: [...(state.playlists || []), ...data.items],
         nextUrl: data.next,
+        isRateLimited: false,
       }));
+    } else if (result.status === 429) {
+      set({ isRateLimited: true });
     }
     set({ isLoadingMore: false });
   },
@@ -75,7 +86,7 @@ export const usePlaylistsStore = create<PlaylistsState>()((set, get) => ({
   addTrackToPlaylist: async (playlistId: string, trackUri: string) => {
     try {
       const result = await apiPost(
-        `https://api.spotify.com/v1/playlists/${playlistId}/tracks`,
+        `https://api.spotify.com/v1/playlists/${playlistId}/items`,
         { uris: [trackUri] }
       );
       return result !== null;
@@ -93,5 +104,6 @@ export const usePlaylistsStore = create<PlaylistsState>()((set, get) => ({
       isRefreshing: false,
       isFetching: false,
       isLoadingMore: false,
+      isRateLimited: false,
     }),
 }));
