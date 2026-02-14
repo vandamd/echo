@@ -218,7 +218,9 @@ export default function PlaylistDetailScreen() {
 
           log("Playlist details: Fetched fresh data from API");
           setPlaylist(playlistData);
-          await saveCachedPlaylistDetail(playlistData);
+          if (hasLoadedPlaylistItems(playlistData)) {
+            await saveCachedPlaylistDetail(playlistData);
+          }
         } else if (!hasDisplayedData) {
           throw new Error("Failed to fetch playlist details");
         }
