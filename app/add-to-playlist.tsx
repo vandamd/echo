@@ -12,7 +12,7 @@ import { HapticPressable } from "@/shared/components/HapticPressable";
 import { StyledText } from "@/shared/components/StyledText";
 import { usePreventDoubleTap } from "@/shared/hooks/usePreventDoubleTap";
 import type { SpotifyPlaylist } from "@/shared/types/spotify";
-import { n } from "@/shared/utils";
+import { getRateLimitMessage, n } from "@/shared/utils";
 import { log, logError } from "@/shared/utils/logger";
 
 export default function AddToPlaylistScreen() {
@@ -20,6 +20,8 @@ export default function AddToPlaylistScreen() {
   const playlists = usePlaylistsStore((s) => s.playlists);
   const fetchPlaylists = usePlaylistsStore((s) => s.fetch);
   const addTrackToPlaylist = usePlaylistsStore((s) => s.addTrackToPlaylist);
+  const isRateLimited = usePlaylistsStore((s) => s.isRateLimited);
+  const rateLimitRetryAt = usePlaylistsStore((s) => s.rateLimitRetryAt);
   const params = useLocalSearchParams<{
     trackUri?: string;
   }>();
@@ -133,6 +135,10 @@ export default function AddToPlaylistScreen() {
           })
         : null,
     [accessiblePlaylists]
+  );
+  const playlistRateLimitMessage = useMemo(
+    () => getRateLimitMessage("playlists", rateLimitRetryAt),
+    [rateLimitRetryAt]
   );
 
   const togglePlaylistSelection = (playlistId: string) => {
@@ -251,7 +257,11 @@ export default function AddToPlaylistScreen() {
         style={{ paddingHorizontal: n(20), gap: 0 }}
       >
         <View style={styles.centeredMessageContainer}>
-          <StyledText style={styles.emptyText}>No playlists found.</StyledText>
+          <StyledText
+            style={isRateLimited ? styles.rateLimitText : styles.emptyText}
+          >
+            {isRateLimited ? playlistRateLimitMessage : "No playlists found."}
+          </StyledText>
         </View>
       </ContentContainer>
     );
@@ -268,9 +278,14 @@ export default function AddToPlaylistScreen() {
         ItemSeparatorComponent={() => <View style={{ height: n(8) }} />}
         keyExtractor={(item) => item.id}
         ListHeaderComponent={
-          hideCreatePlaylist
-            ? null
-            : () => (
+          isRateLimited || !hideCreatePlaylist ? (
+            <View>
+              {isRateLimited && (
+                <StyledText style={styles.rateLimitText}>
+                  {playlistRateLimitMessage}
+                </StyledText>
+              )}
+              {!hideCreatePlaylist && (
                 <HapticPressable
                   onPress={handleCreatePlaylistPress}
                   style={styles.newPlaylistItemContainer}
@@ -286,7 +301,9 @@ export default function AddToPlaylistScreen() {
                     </StyledText>
                   </View>
                 </HapticPressable>
-              )
+              )}
+            </View>
+          ) : null
         }
         overScrollMode="never"
         renderItem={renderPlaylistItem}
@@ -331,10 +348,17 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    width: "100%",
   },
   emptyText: {
     fontSize: n(18),
     textAlign: "center",
+  },
+  rateLimitText: {
+    fontSize: n(16),
+    lineHeight: n(20),
+    textAlign: "center",
+    marginBottom: n(2),
   },
   itemContainer: {
     minHeight: n(50),
