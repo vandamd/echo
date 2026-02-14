@@ -59,9 +59,6 @@ function RootNavigation() {
     if (tabPreferences.showLikedSongs) {
       return "/(tabs)";
     }
-    if (tabPreferences.showArtists) {
-      return "/(tabs)/artists";
-    }
     if (tabPreferences.showAlbums) {
       return "/(tabs)/albums";
     }

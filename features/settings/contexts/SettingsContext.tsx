@@ -30,26 +30,19 @@ type SettingKey = keyof typeof SETTING_KEYS;
 
 type BooleanSettings = Record<SettingKey, boolean>;
 
-export type TabId =
-  | "index"
-  | "artists"
-  | "albums"
-  | "podcasts"
-  | "playlists"
-  | "search";
+export type TabId = "index" | "albums" | "podcasts" | "playlists" | "search";
 
 export const DEFAULT_TAB_ORDER: TabId[] = [
   "index",
-  "artists",
   "albums",
   "podcasts",
   "playlists",
   "search",
 ];
+const DEFAULT_TAB_ORDER_SET = new Set<TabId>(DEFAULT_TAB_ORDER);
 
 export interface TabPreferences {
   showLikedSongs: boolean;
-  showArtists: boolean;
   showAlbums: boolean;
   showPodcasts: boolean;
   showPlaylists: boolean;
@@ -59,7 +52,6 @@ export interface TabPreferences {
 
 const defaultTabPreferences: TabPreferences = {
   showLikedSongs: true,
-  showArtists: false,
   showAlbums: true,
   showPodcasts: true,
   showPlaylists: true,
@@ -111,21 +103,115 @@ interface SettingsContextType {
   isLoading: boolean;
 }
 
+interface StoredTabPreferences {
+  showLikedSongs?: boolean;
+  showArtists?: boolean;
+  showAlbums?: boolean;
+  showPodcasts?: boolean;
+  showPlaylists?: boolean;
+  showSearch?: boolean;
+  tabOrder?: unknown;
+}
+
+const getBooleanValue = (value: unknown, fallback: boolean) =>
+  typeof value === "boolean" ? value : fallback;
+
+const sanitiseTabOrder = (value: unknown): TabId[] => {
+  if (!Array.isArray(value)) {
+    return [...DEFAULT_TAB_ORDER];
+  }
+
+  const validOrder: TabId[] = [];
+  for (const item of value) {
+    if (typeof item !== "string") {
+      continue;
+    }
+
+    if (!DEFAULT_TAB_ORDER_SET.has(item as TabId)) {
+      continue;
+    }
+
+    const tabId = item as TabId;
+    if (!validOrder.includes(tabId)) {
+      validOrder.push(tabId);
+    }
+  }
+
+  for (const tabId of DEFAULT_TAB_ORDER) {
+    if (!validOrder.includes(tabId)) {
+      validOrder.push(tabId);
+    }
+  }
+
+  return validOrder;
+};
+
+const parseStoredTabPreferences = (
+  value: string | null
+): { tabPrefs: TabPreferences | null; shouldPersist: boolean } => {
+  if (!value) {
+    return { tabPrefs: null, shouldPersist: false };
+  }
+
+  try {
+    const stored = JSON.parse(value) as StoredTabPreferences;
+    const parsed: TabPreferences = {
+      showLikedSongs: getBooleanValue(
+        stored.showLikedSongs,
+        defaultTabPreferences.showLikedSongs
+      ),
+      showAlbums: getBooleanValue(
+        stored.showAlbums,
+        defaultTabPreferences.showAlbums
+      ),
+      showPodcasts: getBooleanValue(
+        stored.showPodcasts,
+        defaultTabPreferences.showPodcasts
+      ),
+      showPlaylists: getBooleanValue(
+        stored.showPlaylists,
+        defaultTabPreferences.showPlaylists
+      ),
+      showSearch: getBooleanValue(
+        stored.showSearch,
+        defaultTabPreferences.showSearch
+      ),
+      tabOrder: sanitiseTabOrder(stored.tabOrder),
+    };
+
+    return {
+      tabPrefs: parsed,
+      shouldPersist: JSON.stringify(parsed) !== value,
+    };
+  } catch (error) {
+    logError("Error parsing tab preferences:", error);
+    return {
+      tabPrefs: { ...defaultTabPreferences, tabOrder: [...DEFAULT_TAB_ORDER] },
+      shouldPersist: true,
+    };
+  }
+};
+
 const parseStoredSettings = (
   results: readonly [string, string | null][]
-): { settings: BooleanSettings; tabPrefs: TabPreferences | null } => {
+): {
+  settings: BooleanSettings;
+  tabPrefs: TabPreferences | null;
+  shouldPersistTabPrefs: boolean;
+} => {
   const settings = { ...defaultSettings };
   let tabPrefs: TabPreferences | null = null;
+  let shouldPersistTabPrefs = false;
   for (const [key, value] of results) {
     if (key === TAB_PREFERENCES_KEY) {
-      if (value) {
-        tabPrefs = { ...defaultTabPreferences, ...JSON.parse(value) };
-      }
+      const parsed = parseStoredTabPreferences(value);
+      tabPrefs = parsed.tabPrefs;
+      shouldPersistTabPrefs = parsed.shouldPersist;
     } else if (value !== null && key in SETTING_KEYS) {
       settings[key as SettingKey] = value === "true";
     }
   }
-  return { settings, tabPrefs };
+  return { settings, tabPrefs, shouldPersistTabPrefs };
 };
 
 const SettingsContext = createContext<SettingsContextType | undefined>(
@@ -147,9 +233,19 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
           ...keys,
           TAB_PREFERENCES_KEY,
         ]);
-        const { settings: loaded, tabPrefs } = parseStoredSettings(results);
+        const {
+          settings: loaded,
+          tabPrefs,
+          shouldPersistTabPrefs,
+        } = parseStoredSettings(results);
         if (tabPrefs) {
           setTabPreferences(tabPrefs);
+          if (shouldPersistTabPrefs) {
+            await AsyncStorage.setItem(
+              TAB_PREFERENCES_KEY,
+              JSON.stringify(tabPrefs)
+            );
+          }
         }
         setSettings(loaded);
       } catch (error) {

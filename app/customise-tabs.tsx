@@ -1,4 +1,8 @@
-import { type TabId, useSettings } from "@/features/settings";
+import {
+  type TabId,
+  type TabPreferences,
+  useSettings,
+} from "@/features/settings";
 import ContentContainer from "@/shared/components/ContentContainer";
 import { ToggleSwitch } from "@/shared/components/ToggleSwitch";
 import { n } from "@/shared/utils";
@@ -6,18 +10,11 @@ import { n } from "@/shared/utils";
 interface TabConfig {
   id: TabId;
   label: string;
-  preferenceKey:
-    | "showLikedSongs"
-    | "showArtists"
-    | "showAlbums"
-    | "showPodcasts"
-    | "showPlaylists"
-    | "showSearch";
+  preferenceKey: keyof Omit<TabPreferences, "tabOrder">;
 }
 
 const TAB_CONFIGS: Record<TabId, TabConfig> = {
   index: { id: "index", label: "Liked Songs", preferenceKey: "showLikedSongs" },
-  artists: { id: "artists", label: "Artists", preferenceKey: "showArtists" },
   albums: { id: "albums", label: "Albums", preferenceKey: "showAlbums" },
   podcasts: {
     id: "podcasts",
