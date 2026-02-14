@@ -152,7 +152,7 @@ export const useArtistsStore = create<ArtistsState>()((set, get) => ({
 
   fetchArtistAlbums: async (artistId: string) => {
     const data = await apiGet<SpotifyPaginatedResponse<SpotifyAlbumSimple>>(
-      `https://api.spotify.com/v1/artists/${artistId}/albums?include_groups=album,single&limit=50`
+      `https://api.spotify.com/v1/artists/${artistId}/albums?limit=50`
     );
     if (data) {
       return { albums: data.items, nextUrl: data.next };

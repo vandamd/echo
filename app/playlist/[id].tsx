@@ -19,6 +19,7 @@ import { log, logError } from "@/shared/utils";
 import { apiGet } from "@/shared/utils/api-client";
 import {
   parsePlaylist,
+  parsePlaylistItems,
   parsePlaylistItemsPage,
 } from "@/shared/utils/normalize-playlist";
 
@@ -47,7 +48,7 @@ export default function PlaylistDetailScreen() {
     playlistString?: string;
     playlistName?: string;
   }>();
-  const { user } = useAuth();
+  const { user, ensureValidToken } = useAuth();
   const { skipToIndex } = usePlayback();
   const { showPlaylistTrackCovers } = useSettings();
   const router = useRouter();
@@ -68,6 +69,9 @@ export default function PlaylistDetailScreen() {
     SpotifyPlaylist | SpotifyPlaylistFull | null
   >(null);
   const [error, setError] = useState<string | null>(null);
+  const [itemsUnavailableMessage, setItemsUnavailableMessage] = useState<
+    string | null
+  >(null);
   const [isLoadingMoreTracks, setIsLoadingMoreTracks] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(
     !hasLoadedPlaylistItems(initialPlaylist)
@@ -102,13 +106,17 @@ export default function PlaylistDetailScreen() {
     }
 
     const hasInitialData = hasLoadedPlaylistItems(initialPlaylist);
+    let cachedPlaylistWithItems: SpotifyPlaylistFull | null = null;
 
     try {
+      setItemsUnavailableMessage(null);
+
       if (!hasInitialData) {
         try {
           const cachedPlaylist = await getCachedPlaylistDetail(id);
           if (hasLoadedPlaylistItems(cachedPlaylist)) {
             log("Playlist details: Displaying cached data");
+            cachedPlaylistWithItems = cachedPlaylist;
             setPlaylist(cachedPlaylist);
           }
         } catch (cacheError) {
@@ -134,9 +142,68 @@ export default function PlaylistDetailScreen() {
         );
         const data = raw ? parsePlaylist(raw) : null;
         if (data) {
+          let playlistData: SpotifyPlaylist | SpotifyPlaylistFull = data;
+          let itemsUnavailable = false;
+          let itemsFetchFailed = false;
+
+          if (!hasLoadedPlaylistItems(playlistData)) {
+            const token = await ensureValidToken();
+
+            if (token) {
+              const itemsResponse = await fetch(
+                `https://api.spotify.com/v1/playlists/${id}/items?limit=50`,
+                {
+                  headers: {
+                    Authorization: `Bearer ${token}`,
+                  },
+                }
+              );
+
+              if (itemsResponse.ok) {
+                const rawItems = (await itemsResponse.json()) as unknown;
+                const playlistItems = parsePlaylistItems(rawItems);
+                if (playlistItems) {
+                  playlistData = { ...playlistData, items: playlistItems };
+                } else {
+                  itemsFetchFailed = true;
+                }
+              } else if (itemsResponse.status === 403) {
+                itemsUnavailable = true;
+              } else {
+                itemsFetchFailed = true;
+              }
+            } else {
+              itemsFetchFailed = true;
+            }
+
+            if (
+              !hasLoadedPlaylistItems(playlistData) &&
+              cachedPlaylistWithItems
+            ) {
+              playlistData = {
+                ...playlistData,
+                items: cachedPlaylistWithItems.items,
+              };
+            } else if (
+              !hasLoadedPlaylistItems(playlistData) &&
+              itemsUnavailable
+            ) {
+              setItemsUnavailableMessage(
+                "Spotify now only provides access to playlists you own or collaborate on."
+              );
+            }
+          }
+
+          if (itemsFetchFailed && !hasLoadedPlaylistItems(playlistData)) {
+            setError("Failed to load playlist tracks.");
+            setItemsUnavailableMessage(null);
+          } else {
+            setError(null);
+          }
+
           log("Playlist details: Fetched fresh data from API");
-          setPlaylist(data);
-          await saveCachedPlaylistDetail(data);
+          setPlaylist(playlistData);
+          await saveCachedPlaylistDetail(playlistData);
         } else if (!hasInitialData) {
           throw new Error("Failed to fetch playlist details");
         }
@@ -151,7 +218,7 @@ export default function PlaylistDetailScreen() {
     } finally {
       setIsInitialLoading(false);
     }
-  }, [id, initialPlaylist, isOnline]);
+  }, [id, initialPlaylist, isOnline, ensureValidToken]);
 
   useFocusEffect(
     useCallback(() => {
@@ -262,7 +329,9 @@ export default function PlaylistDetailScreen() {
   return (
     <DetailScreen
       data={loadedPlaylist?.items.items || []}
-      emptyMessage="No tracks found in this playlist."
+      emptyMessage={
+        itemsUnavailableMessage ?? "No tracks found in this playlist."
+      }
       error={error}
       headerIcon={canEditPlaylist ? "edit" : undefined}
       headerIconPress={handleEditPress}

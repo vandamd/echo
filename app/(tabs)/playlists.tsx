@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { View } from "react-native";
 import { PLAYLIST_DETAIL_KEY_PREFIX } from "@/constants/spotify";
 import { useAuth } from "@/features/auth";
@@ -15,8 +15,30 @@ import { log, logError } from "@/shared/utils/logger";
 
 const CREATE_NEW_PLAYLIST_ID = "CREATE_NEW_PLAYLIST_ID";
 
+const isOwnedByCurrentUser = (playlist: SpotifyPlaylist, userId?: string) =>
+  userId ? playlist.owner.id === userId : false;
+
+const fetchPlaylistItemsAccess = async (
+  playlistId: string,
+  token: string
+): Promise<string | null> => {
+  try {
+    const response = await fetch(
+      `https://api.spotify.com/v1/playlists/${playlistId}/items?limit=1`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    return response.ok ? playlistId : null;
+  } catch {
+    return null;
+  }
+};
+
 export default function PlaylistsScreen() {
-  const { isLoading } = useAuth();
+  const { isLoading, user, ensureValidToken } = useAuth();
   const playlists = usePlaylistsStore((s) => s.playlists);
   const fetchPlaylists = usePlaylistsStore((s) => s.fetch);
   const isRefreshing = usePlaylistsStore((s) => s.isRefreshing);
@@ -34,12 +56,82 @@ export default function PlaylistsScreen() {
   const [cachedPlaylistIds, setCachedPlaylistIds] = useState<Set<string>>(
     new Set()
   );
+  const [extraAccessiblePlaylistIds, setExtraAccessiblePlaylistIds] = useState<
+    Set<string>
+  >(new Set());
 
   const playlistSource = playlists ?? offlinePlaylists;
-  const sortedPlaylists = useMemo(
+
+  useEffect(() => {
+    let cancelled = false;
+    const clearExtraAccessiblePlaylists = () => {
+      if (!cancelled) {
+        setExtraAccessiblePlaylistIds(new Set());
+      }
+    };
+
+    const resolveExtraAccessiblePlaylists = async () => {
+      if (!playlistSource || playlistSource.length === 0 || !isOnline) {
+        clearExtraAccessiblePlaylists();
+        return;
+      }
+
+      const candidatePlaylists = playlistSource.filter((playlist) => {
+        const isOwned = isOwnedByCurrentUser(playlist, user?.id);
+        return !(isOwned || playlist.collaborative);
+      });
+
+      if (candidatePlaylists.length === 0) {
+        clearExtraAccessiblePlaylists();
+        return;
+      }
+
+      const token = await ensureValidToken();
+      if (!token) {
+        clearExtraAccessiblePlaylists();
+        return;
+      }
+
+      const accessChecks = await Promise.all(
+        candidatePlaylists.map((playlist) =>
+          fetchPlaylistItemsAccess(playlist.id, token)
+        )
+      );
+
+      if (cancelled) {
+        return;
+      }
+
+      const accessibleIds = accessChecks.filter(
+        (playlistId): playlistId is string => playlistId !== null
+      );
+      setExtraAccessiblePlaylistIds(new Set(accessibleIds));
+    };
+
+    resolveExtraAccessiblePlaylists();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [playlistSource, user?.id, isOnline, ensureValidToken]);
+
+  const accessiblePlaylists = useMemo(
     () =>
       playlistSource
-        ? [...playlistSource].sort((a, b) => {
+        ? playlistSource.filter((playlist) =>
+            user?.id
+              ? playlist.owner.id === user.id ||
+                playlist.collaborative ||
+                extraAccessiblePlaylistIds.has(playlist.id)
+              : true
+          )
+        : null,
+    [playlistSource, user?.id, extraAccessiblePlaylistIds]
+  );
+  const sortedPlaylists = useMemo(
+    () =>
+      accessiblePlaylists
+        ? [...accessiblePlaylists].sort((a, b) => {
             const ownerCmp = (
               a.owner.display_name ??
               a.owner.id ??
@@ -51,7 +143,7 @@ export default function PlaylistsScreen() {
             return a.name.localeCompare(b.name);
           })
         : null,
-    [playlistSource]
+    [accessiblePlaylists]
   );
 
   const checkCachedPlaylists = useCallback(async () => {

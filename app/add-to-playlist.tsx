@@ -1,6 +1,6 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { useAuth } from "@/features/auth";
 import { usePlaylistsStore } from "@/features/library/stores";
@@ -16,7 +16,7 @@ import { n } from "@/shared/utils";
 import { log, logError } from "@/shared/utils/logger";
 
 export default function AddToPlaylistScreen() {
-  const { isLoading, accessToken, user } = useAuth();
+  const { isLoading, accessToken, user, ensureValidToken } = useAuth();
   const playlists = usePlaylistsStore((s) => s.playlists);
   const fetchPlaylists = usePlaylistsStore((s) => s.fetch);
   const addTrackToPlaylist = usePlaylistsStore((s) => s.addTrackToPlaylist);
@@ -26,17 +26,101 @@ export default function AddToPlaylistScreen() {
   const { trackUri } = params;
   log("AddToPlaylistScreen received params:", params);
   const [selectedPlaylists, setSelectedPlaylists] = useState<string[]>([]);
+  const [extraAccessiblePlaylistIds, setExtraAccessiblePlaylistIds] = useState<
+    Set<string>
+  >(new Set());
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (accessToken && user && !playlists && !isLoading) {
       fetchPlaylists();
     }
   }, [accessToken, user, playlists, fetchPlaylists, isLoading]);
 
-  const sortedPlaylists = useMemo(
+  useEffect(() => {
+    let cancelled = false;
+    const clearExtraAccessiblePlaylists = () => {
+      if (!cancelled) {
+        setExtraAccessiblePlaylistIds(new Set());
+      }
+    };
+
+    const resolveExtraAccessiblePlaylists = async () => {
+      if (!playlists || playlists.length === 0) {
+        clearExtraAccessiblePlaylists();
+        return;
+      }
+
+      const candidatePlaylists = playlists.filter((playlist) => {
+        const isOwnedByCurrentUser = user?.id
+          ? playlist.owner.id === user.id
+          : false;
+        return !(isOwnedByCurrentUser || playlist.collaborative);
+      });
+
+      if (candidatePlaylists.length === 0) {
+        clearExtraAccessiblePlaylists();
+        return;
+      }
+
+      const token = await ensureValidToken();
+      if (!token) {
+        clearExtraAccessiblePlaylists();
+        return;
+      }
+
+      const accessChecks = await Promise.all(
+        candidatePlaylists.map(async (playlist) => {
+          try {
+            const response = await fetch(
+              `https://api.spotify.com/v1/playlists/${playlist.id}/items?limit=1`,
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              }
+            );
+            return response.ok ? playlist.id : null;
+          } catch {
+            return null;
+          }
+        })
+      );
+
+      if (cancelled) {
+        return;
+      }
+
+      const accessibleIds = accessChecks.filter(
+        (playlistId): playlistId is string => playlistId !== null
+      );
+      setExtraAccessiblePlaylistIds(new Set(accessibleIds));
+    };
+
+    resolveExtraAccessiblePlaylists();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [playlists, user?.id, ensureValidToken]);
+
+  const accessiblePlaylists = useMemo(
     () =>
       playlists
-        ? [...playlists].sort((a, b) => {
+        ? playlists.filter((playlist) =>
+            user?.id
+              ? playlist.owner.id === user.id ||
+                playlist.collaborative ||
+                extraAccessiblePlaylistIds.has(playlist.id)
+              : true
+          )
+        : null,
+    [playlists, user?.id, extraAccessiblePlaylistIds]
+  );
+
+  const sortedPlaylists = useMemo(
+    () =>
+      accessiblePlaylists
+        ? [...accessiblePlaylists].sort((a, b) => {
             const ownerCmp = (
               a.owner.display_name ??
               a.owner.id ??
@@ -48,7 +132,7 @@ export default function AddToPlaylistScreen() {
             return a.name.localeCompare(b.name);
           })
         : null,
-    [playlists]
+    [accessiblePlaylists]
   );
 
   const togglePlaylistSelection = (playlistId: string) => {

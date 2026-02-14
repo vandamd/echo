@@ -24,11 +24,6 @@ interface RawPlaylistItems {
   total: number;
 }
 
-interface RawPlaylistItemsPage {
-  items: RawPlaylistTrackEntry[];
-  next: string | null;
-}
-
 interface RawPlaylistSummary {
   items?: {
     href?: string;
@@ -112,23 +107,47 @@ export const parsePlaylist = (raw: unknown): ParsedPlaylist | null => {
   return normalizePlaylist(raw);
 };
 
-const normalizePlaylistItemsPage = (
+const normalizePlaylistItems = (
   raw: Record<string, unknown>
-): { items: SpotifyPlaylistTrack[]; next: string | null } => {
-  const data = raw as unknown as RawPlaylistItemsPage;
+): SpotifyPlaylistFull["items"] | null => {
+  if (!hasTrackEntries(raw)) {
+    return null;
+  }
+
+  const data = raw as unknown as RawPlaylistItems;
   return {
+    href: typeof data.href === "string" ? data.href : "",
     items: normalizeTrackEntries(data.items ?? []),
-    next: data.next ?? null,
+    limit: typeof data.limit === "number" ? data.limit : 0,
+    next: typeof data.next === "string" ? data.next : null,
+    offset: typeof data.offset === "number" ? data.offset : 0,
+    previous: typeof data.previous === "string" ? data.previous : null,
+    total: typeof data.total === "number" ? data.total : 0,
   };
+};
+
+export const parsePlaylistItems = (
+  raw: unknown
+): SpotifyPlaylistFull["items"] | null => {
+  if (!isRecord(raw)) {
+    return null;
+  }
+
+  return normalizePlaylistItems(raw);
 };
 
 export const parsePlaylistItemsPage = (
   raw: unknown
 ): { items: SpotifyPlaylistTrack[]; next: string | null } | null => {
-  if (!isRecord(raw)) {
+  const parsedItems = parsePlaylistItems(raw);
+  if (!parsedItems) {
     return null;
   }
-  return normalizePlaylistItemsPage(raw);
+
+  return {
+    items: parsedItems.items,
+    next: parsedItems.next,
+  };
 };
 
 const normalizePlaylistSummary = (
