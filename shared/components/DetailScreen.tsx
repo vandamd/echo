@@ -28,8 +28,10 @@ interface DetailScreenProps<T> {
   headerIcon?: keyof typeof MaterialIcons.glyphMap;
   headerIconPress?: () => void;
   headerIconShowLength?: number;
-  itemSeparatorComponent?: React.ComponentType<{ leadingItem: T }>;
+  itemSeparatorComponent?: React.ComponentType<{ leadingItem: T }> | null;
 }
+
+const DefaultItemSeparator = () => <View style={{ height: n(8) }} />;
 
 export function DetailScreen<T>({
   title,
@@ -53,6 +55,10 @@ export function DetailScreen<T>({
 }: DetailScreenProps<T>) {
   const { hideDetailCovers: settingsHideCovers } = useSettings();
   const shouldHideCovers = hideDetailCovers ?? settingsHideCovers;
+  const resolvedItemSeparatorComponent =
+    itemSeparatorComponent === null
+      ? undefined
+      : (itemSeparatorComponent ?? DefaultItemSeparator);
 
   return (
     <ContentContainer
@@ -68,7 +74,7 @@ export function DetailScreen<T>({
           contentContainerStyle={detailScreenStyles.listContentContainer}
           data={data}
           ItemSeparatorComponent={
-            itemSeparatorComponent as React.ComponentType<{
+            resolvedItemSeparatorComponent as React.ComponentType<{
               leadingItem: unknown;
             }>
           }

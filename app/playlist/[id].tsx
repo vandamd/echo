@@ -7,7 +7,11 @@ import {
 } from "@/features/library";
 import { usePlayback } from "@/features/playback";
 import { useSettings } from "@/features/settings";
-import { DetailScreen, TrackListItem } from "@/shared/components";
+import {
+  DetailScreen,
+  MediaListItem,
+  TrackListItem,
+} from "@/shared/components";
 import { useNetworkState, usePreventDoubleTap } from "@/shared/hooks";
 import type {
   SpotifyPlaylist,
@@ -15,7 +19,7 @@ import type {
   SpotifyPlaylistTrack,
   SpotifyTrackSimple,
 } from "@/shared/types/spotify";
-import { log, logError } from "@/shared/utils";
+import { formatDuration, getArtistNames, log, logError } from "@/shared/utils";
 import { apiGet, apiGetWithStatus } from "@/shared/utils/api-client";
 import {
   parsePlaylist,
@@ -329,15 +333,30 @@ export default function PlaylistDetailScreen() {
       return null;
     }
 
+    if (showPlaylistTrackCovers) {
+      const artistNames = getArtistNames(track.artists);
+      const secondaryText = track.duration_ms
+        ? `${artistNames} · ${formatDuration(track.duration_ms)}`
+        : artistNames;
+
+      return (
+        <MediaListItem
+          imageUri={track.album?.images?.[0]?.url}
+          onPress={() => handleTrackPress(index)}
+          placeholderIcon="music-note"
+          primaryText={track.name}
+          secondaryText={secondaryText}
+        />
+      );
+    }
+
     return (
       <TrackListItem
         artists={track.artists}
         durationMs={track.duration_ms}
         imageUri={track.album?.images?.[0]?.url}
-        key={`${track.id || "unknown"}-${index}`}
         name={track.name}
         onPress={() => handleTrackPress(index)}
-        showImage={showPlaylistTrackCovers}
         trackNumber={(loadedPlaylist?.items.offset || 0) + index + 1}
       />
     );
