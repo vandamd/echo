@@ -30,6 +30,16 @@ type SettingKey = keyof typeof SETTING_KEYS;
 
 type BooleanSettings = Record<SettingKey, boolean>;
 
+export type LibrarySortOption = "alphabetical" | "creator" | "recentlyAdded";
+
+const SORT_SETTING_KEYS = {
+  albumSortOrder: "albumSortOrder",
+  podcastSortOrder: "podcastSortOrder",
+} as const;
+
+type SortSettingKey = keyof typeof SORT_SETTING_KEYS;
+type LibrarySortSettings = Record<SortSettingKey, LibrarySortOption>;
+
 export type TabId = "index" | "albums" | "podcasts" | "playlists" | "search";
 
 export const DEFAULT_TAB_ORDER: TabId[] = [
@@ -72,6 +82,11 @@ const defaultSettings: BooleanSettings = {
   hideYourEpisodes: false,
 };
 
+const defaultSortSettings: LibrarySortSettings = {
+  albumSortOrder: "creator",
+  podcastSortOrder: "creator",
+};
+
 interface SettingsContextType {
   triggerHaptic: () => void;
   invertColors: boolean;
@@ -94,6 +109,10 @@ interface SettingsContextType {
   setHidePlayingCover: (value: boolean) => void;
   hideYourEpisodes: boolean;
   setHideYourEpisodes: (value: boolean) => void;
+  albumSortOrder: LibrarySortOption;
+  setAlbumSortOrder: (value: LibrarySortOption) => Promise<void>;
+  podcastSortOrder: LibrarySortOption;
+  setPodcastSortOrder: (value: LibrarySortOption) => Promise<void>;
   tabPreferences: TabPreferences;
   updateTabPreference: (
     key: keyof Omit<TabPreferences, "tabOrder">,
@@ -114,6 +133,22 @@ interface StoredTabPreferences {
 
 const getBooleanValue = (value: unknown, fallback: boolean) =>
   typeof value === "boolean" ? value : fallback;
+
+const isLibrarySortOption = (value: unknown): value is LibrarySortOption =>
+  value === "alphabetical" || value === "creator" || value === "recentlyAdded";
+
+const parseStoredSortOption = (
+  value: string | null,
+  fallback: LibrarySortOption
+): { sortOption: LibrarySortOption; shouldPersist: boolean } => {
+  if (isLibrarySortOption(value)) {
+    return { sortOption: value, shouldPersist: false };
+  }
+  return {
+    sortOption: fallback,
+    shouldPersist: value !== null,
+  };
+};
 
 const sanitiseTabOrder = (value: unknown): TabId[] => {
   if (!Array.isArray(value)) {
@@ -195,10 +230,14 @@ const parseStoredSettings = (
   results: readonly [string, string | null][]
 ): {
   settings: BooleanSettings;
+  sortSettings: LibrarySortSettings;
+  sortSettingsToPersist: [string, string][];
   tabPrefs: TabPreferences | null;
   shouldPersistTabPrefs: boolean;
 } => {
   const settings = { ...defaultSettings };
+  const sortSettings = { ...defaultSortSettings };
+  const sortSettingsToPersist: [string, string][] = [];
   let tabPrefs: TabPreferences | null = null;
   let shouldPersistTabPrefs = false;
   for (const [key, value] of results) {
@@ -206,11 +245,41 @@ const parseStoredSettings = (
       const parsed = parseStoredTabPreferences(value);
       tabPrefs = parsed.tabPrefs;
       shouldPersistTabPrefs = parsed.shouldPersist;
+    } else if (key === SORT_SETTING_KEYS.albumSortOrder) {
+      const parsed = parseStoredSortOption(
+        value,
+        defaultSortSettings.albumSortOrder
+      );
+      sortSettings.albumSortOrder = parsed.sortOption;
+      if (parsed.shouldPersist) {
+        sortSettingsToPersist.push([
+          SORT_SETTING_KEYS.albumSortOrder,
+          parsed.sortOption,
+        ]);
+      }
+    } else if (key === SORT_SETTING_KEYS.podcastSortOrder) {
+      const parsed = parseStoredSortOption(
+        value,
+        defaultSortSettings.podcastSortOrder
+      );
+      sortSettings.podcastSortOrder = parsed.sortOption;
+      if (parsed.shouldPersist) {
+        sortSettingsToPersist.push([
+          SORT_SETTING_KEYS.podcastSortOrder,
+          parsed.sortOption,
+        ]);
+      }
     } else if (value !== null && key in SETTING_KEYS) {
       settings[key as SettingKey] = value === "true";
     }
   }
-  return { settings, tabPrefs, shouldPersistTabPrefs };
+  return {
+    settings,
+    sortSettings,
+    sortSettingsToPersist,
+    tabPrefs,
+    shouldPersistTabPrefs,
+  };
 };
 
 const SettingsContext = createContext<SettingsContextType | undefined>(
@@ -219,6 +288,8 @@ const SettingsContext = createContext<SettingsContextType | undefined>(
 
 export const SettingsProvider = ({ children }: { children: ReactNode }) => {
   const [settings, setSettings] = useState<BooleanSettings>(defaultSettings);
+  const [sortSettings, setSortSettings] =
+    useState<LibrarySortSettings>(defaultSortSettings);
   const [tabPreferences, setTabPreferences] = useState<TabPreferences>(
     defaultTabPreferences
   );
@@ -228,12 +299,16 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
     const loadSettings = async () => {
       try {
         const keys = Object.values(SETTING_KEYS);
+        const sortKeys = Object.values(SORT_SETTING_KEYS);
         const results = await AsyncStorage.multiGet([
           ...keys,
           TAB_PREFERENCES_KEY,
+          ...sortKeys,
         ]);
         const {
           settings: loaded,
+          sortSettings: loadedSortSettings,
+          sortSettingsToPersist,
           tabPrefs,
           shouldPersistTabPrefs,
         } = parseStoredSettings(results);
@@ -247,6 +322,10 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
           }
         }
         setSettings(loaded);
+        setSortSettings(loadedSortSettings);
+        if (sortSettingsToPersist.length > 0) {
+          await AsyncStorage.multiSet(sortSettingsToPersist);
+        }
       } catch (error) {
         logError("Error loading settings:", error);
       } finally {
@@ -305,6 +384,21 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
   const setHideYourEpisodes = useCallback(
     (v: boolean) => setSetting("hideYourEpisodes", v),
     [setSetting]
+  );
+  const setSortSetting = useCallback(
+    async (key: SortSettingKey, value: LibrarySortOption) => {
+      setSortSettings((prev) => ({ ...prev, [key]: value }));
+      await AsyncStorage.setItem(SORT_SETTING_KEYS[key], value);
+    },
+    []
+  );
+  const setAlbumSortOrder = useCallback(
+    (value: LibrarySortOption) => setSortSetting("albumSortOrder", value),
+    [setSortSetting]
+  );
+  const setPodcastSortOrder = useCallback(
+    (value: LibrarySortOption) => setSortSetting("podcastSortOrder", value),
+    [setSortSetting]
   );
 
   const updateTabPreference = useCallback(
@@ -380,6 +474,10 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       setHidePlayingCover,
       hideYourEpisodes: settings.hideYourEpisodes,
       setHideYourEpisodes,
+      albumSortOrder: sortSettings.albumSortOrder,
+      setAlbumSortOrder,
+      podcastSortOrder: sortSettings.podcastSortOrder,
+      setPodcastSortOrder,
       tabPreferences,
       updateTabPreference,
       reorderTab,
@@ -398,6 +496,9 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       setHideAddToPlaylistButton,
       setHidePlayingCover,
       setHideYourEpisodes,
+      sortSettings,
+      setAlbumSortOrder,
+      setPodcastSortOrder,
       tabPreferences,
       updateTabPreference,
       reorderTab,

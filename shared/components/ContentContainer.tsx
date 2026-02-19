@@ -13,6 +13,8 @@ interface ContentContainerProps {
   children?: ReactNode;
   hideBackButton?: boolean;
   onBackPress?: () => void;
+  headerLeftIcon?: keyof typeof MaterialIcons.glyphMap;
+  headerLeftIconPress?: () => void;
   headerIcon?: keyof typeof MaterialIcons.glyphMap;
   headerIconPress?: () => void;
   headerIconShowLength?: number;
@@ -26,6 +28,8 @@ export default function ContentContainer({
   children,
   hideBackButton = false,
   onBackPress,
+  headerLeftIcon,
+  headerLeftIconPress,
   headerIcon,
   headerIconPress,
   headerIconShowLength = 1,
@@ -62,7 +66,9 @@ export default function ContentContainer({
             iconLoading={headerIconLoading}
             iconName={headerIcon}
             iconShowLength={headerIconShowLength}
+            leftIconName={headerLeftIcon}
             onIconPress={headerIconPress}
+            onLeftIconPress={headerLeftIconPress}
             onTitlePress={onTitlePress}
           />
         )}

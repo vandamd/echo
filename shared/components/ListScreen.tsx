@@ -1,3 +1,4 @@
+import type { MaterialIcons } from "@expo/vector-icons";
 import type { ReactElement } from "react";
 import { RefreshControl, View } from "react-native";
 import ContentContainer from "@/shared/components/ContentContainer";
@@ -18,6 +19,9 @@ interface ListScreenProps<T> {
   isLoadingMore?: boolean;
   isOnline?: boolean;
   refreshEnabled?: boolean;
+  headerLeftIcon?: keyof typeof MaterialIcons.glyphMap;
+  headerLeftIconPress?: () => void;
+  headerIcon?: keyof typeof MaterialIcons.glyphMap;
   headerIconPress?: () => void;
 }
 
@@ -33,6 +37,9 @@ export function ListScreen<T>({
   isLoadingMore,
   isOnline,
   refreshEnabled = true,
+  headerLeftIcon,
+  headerLeftIconPress,
+  headerIcon = "multitrack-audio",
   headerIconPress,
 }: ListScreenProps<T>) {
   const shouldAttachRefreshControl = data !== null;
@@ -40,9 +47,11 @@ export function ListScreen<T>({
   if (!data || data.length === 0) {
     return (
       <ContentContainer
-        headerIcon="multitrack-audio"
+        headerIcon={headerIcon}
         headerIconPress={headerIconPress}
         headerIconShowLength={1}
+        headerLeftIcon={headerLeftIcon}
+        headerLeftIconPress={headerLeftIconPress}
         headerTitle={title}
         hideBackButton={true}
         style={{ paddingHorizontal: n(20) }}
@@ -90,9 +99,11 @@ export function ListScreen<T>({
 
   return (
     <ContentContainer
-      headerIcon="multitrack-audio"
+      headerIcon={headerIcon}
       headerIconPress={headerIconPress}
       headerIconShowLength={1}
+      headerLeftIcon={headerLeftIcon}
+      headerLeftIconPress={headerLeftIconPress}
       headerTitle={title}
       hideBackButton={true}
       style={{ paddingHorizontal: n(20) }}

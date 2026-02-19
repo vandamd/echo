@@ -8,6 +8,7 @@ import {
   refreshSavedAlbumsFromCache,
   useAlbumsStore,
 } from "@/features/library";
+import { type LibrarySortOption, useSettings } from "@/features/settings";
 import {
   ListScreen,
   MediaListItem,
@@ -28,6 +29,64 @@ import {
 
 type AlbumsListItem = WithRateLimitItem<SpotifySavedAlbum>;
 
+const getAddedAtTimestamp = (value: string) => {
+  const timestamp = Date.parse(value);
+  return Number.isNaN(timestamp) ? 0 : timestamp;
+};
+
+const getAlbumCreatorName = (item: SpotifySavedAlbum) =>
+  item.album.artists[0]?.name ?? "";
+
+const compareAlbumsAlphabetically = (
+  left: SpotifySavedAlbum,
+  right: SpotifySavedAlbum
+) => {
+  const nameDifference = left.album.name.localeCompare(right.album.name);
+  if (nameDifference !== 0) {
+    return nameDifference;
+  }
+  return getAlbumCreatorName(left).localeCompare(getAlbumCreatorName(right));
+};
+
+const compareAlbumsByCreator = (
+  left: SpotifySavedAlbum,
+  right: SpotifySavedAlbum
+) => {
+  const creatorDifference = getAlbumCreatorName(left).localeCompare(
+    getAlbumCreatorName(right)
+  );
+  if (creatorDifference !== 0) {
+    return creatorDifference;
+  }
+  return left.album.name.localeCompare(right.album.name);
+};
+
+const compareAlbumsByRecentlyAdded = (
+  left: SpotifySavedAlbum,
+  right: SpotifySavedAlbum
+) => {
+  const timeDifference =
+    getAddedAtTimestamp(right.added_at) - getAddedAtTimestamp(left.added_at);
+  if (timeDifference !== 0) {
+    return timeDifference;
+  }
+  return left.album.name.localeCompare(right.album.name);
+};
+
+const compareAlbums = (
+  left: SpotifySavedAlbum,
+  right: SpotifySavedAlbum,
+  sortOrder: LibrarySortOption
+) => {
+  if (sortOrder === "recentlyAdded") {
+    return compareAlbumsByRecentlyAdded(left, right);
+  }
+  if (sortOrder === "creator") {
+    return compareAlbumsByCreator(left, right);
+  }
+  return compareAlbumsAlphabetically(left, right);
+};
+
 export default function AlbumsScreen() {
   const { isLoading } = useAuth();
   const albums = useAlbumsStore((s) => s.albums);
@@ -42,23 +101,20 @@ export default function AlbumsScreen() {
   const router = useRouter();
 
   const { isOnline } = useNetworkState();
+  const { albumSortOrder } = useSettings();
   const [offlineAlbums, setOfflineAlbums] = useState<
     SpotifySavedAlbum[] | null
   >(null);
   const [cachedAlbumIds, setCachedAlbumIds] = useState<Set<string>>(new Set());
 
   const albumSource = albums ?? offlineAlbums;
-  const sortedAlbums = useMemo(
-    () =>
-      albumSource
-        ? [...albumSource].sort((a, b) =>
-            (a.album.artists[0]?.name ?? "").localeCompare(
-              b.album.artists[0]?.name ?? ""
-            )
-          )
-        : null,
-    [albumSource]
-  );
+  const sortedAlbums = useMemo(() => {
+    if (!albumSource) {
+      return null;
+    }
+
+    return [...albumSource].sort((a, b) => compareAlbums(a, b, albumSortOrder));
+  }, [albumSortOrder, albumSource]);
   const albumRateLimitMessage = useMemo(
     () => getRateLimitMessage("albums", rateLimitRetryAt),
     [rateLimitRetryAt]
@@ -136,6 +192,9 @@ export default function AlbumsScreen() {
     }
   );
 
+  const handleSortPress = usePreventDoubleTap(() => {
+    router.push("/albums-sort" as never);
+  });
   const handlePlayingPress = usePreventDoubleTap(() => {
     router.push("/playing");
   });
@@ -189,6 +248,8 @@ export default function AlbumsScreen() {
       data={displayAlbums}
       emptyMessage="No saved albums found."
       headerIconPress={handlePlayingPress}
+      headerLeftIcon="sort"
+      headerLeftIconPress={handleSortPress}
       isLoadingMore={isLoadingMore}
       isOnline={isOnline}
       isRefreshing={isRefreshing}

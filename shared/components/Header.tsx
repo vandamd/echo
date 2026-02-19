@@ -8,6 +8,8 @@ import { HapticPressable } from "./HapticPressable";
 import { StyledText } from "./StyledText";
 
 interface HeaderProps {
+  leftIconName?: keyof typeof MaterialIcons.glyphMap;
+  onLeftIconPress?: () => void;
   iconName?: keyof typeof MaterialIcons.glyphMap;
   onIconPress?: () => void;
   iconShowLength?: number;
@@ -19,6 +21,8 @@ interface HeaderProps {
 }
 
 export const Header = React.memo(function Header({
+  leftIconName,
+  onLeftIconPress,
   iconName,
   onIconPress,
   iconShowLength = 1,
@@ -38,7 +42,28 @@ export const Header = React.memo(function Header({
       };
 
   const iconColor = invertColors ? "black" : "white";
+  let leftSlot = <View style={styles.iconContainerLeft} />;
   let rightSlot = <View style={styles.iconContainerRightEmpty} />;
+
+  if (hideBackButton) {
+    if (leftIconName) {
+      leftSlot = (
+        <HapticPressable onPress={onLeftIconPress}>
+          <View style={styles.iconContainerLeft}>
+            <MaterialIcons color={iconColor} name={leftIconName} size={n(28)} />
+          </View>
+        </HapticPressable>
+      );
+    }
+  } else {
+    leftSlot = (
+      <HapticPressable onPress={handleBack}>
+        <View style={styles.iconContainerLeft}>
+          <MaterialIcons color={iconColor} name="arrow-back-ios" size={n(28)} />
+        </View>
+      </HapticPressable>
+    );
+  }
 
   if (iconLoading) {
     rightSlot = (
@@ -67,19 +92,7 @@ export const Header = React.memo(function Header({
         { backgroundColor: invertColors ? "white" : "black" },
       ]}
     >
-      {hideBackButton ? (
-        <View style={styles.iconContainerLeft} />
-      ) : (
-        <HapticPressable onPress={handleBack}>
-          <View style={styles.iconContainerLeft}>
-            <MaterialIcons
-              color={iconColor}
-              name="arrow-back-ios"
-              size={n(28)}
-            />
-          </View>
-        </HapticPressable>
-      )}
+      {leftSlot}
 
       {onTitlePress ? (
         <HapticPressable onPress={onTitlePress} style={styles.titlePressable}>

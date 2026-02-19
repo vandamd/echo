@@ -138,6 +138,8 @@ function RootNavigation() {
       <Stack.Screen name="select-device" />
       <Stack.Screen name="add-to-playlist" />
       <Stack.Screen name="create-playlist" />
+      <Stack.Screen name="albums-sort" />
+      <Stack.Screen name="podcasts-sort" />
       <Stack.Screen name="customise" />
       <Stack.Screen name="customise-tabs" />
     </Stack>
