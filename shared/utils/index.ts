@@ -1,4 +1,5 @@
 export * from "./api-client";
+export * from "./date";
 export * from "./formatters";
 export * from "./logger";
 export * from "./rate-limit-list-item";

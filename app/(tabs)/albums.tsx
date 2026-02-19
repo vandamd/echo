@@ -19,6 +19,7 @@ import { tabScreenStyles as styles } from "@/shared/styles/detailScreen";
 import type { SpotifySavedAlbum } from "@/shared/types/spotify";
 import type { WithRateLimitItem } from "@/shared/utils";
 import {
+  getAddedAtTimestamp,
   getArtistNames,
   getRateLimitMessage,
   isRateLimitItem,
@@ -28,11 +29,6 @@ import {
 } from "@/shared/utils";
 
 type AlbumsListItem = WithRateLimitItem<SpotifySavedAlbum>;
-
-const getAddedAtTimestamp = (value: string) => {
-  const timestamp = Date.parse(value);
-  return Number.isNaN(timestamp) ? 0 : timestamp;
-};
 
 const getAlbumCreatorName = (item: SpotifySavedAlbum) =>
   item.album.artists[0]?.name ?? "";

@@ -16,6 +16,7 @@ import { tabScreenStyles as styles } from "@/shared/styles/detailScreen";
 import type { SpotifySavedShow } from "@/shared/types/spotify";
 import type { WithRateLimitItem } from "@/shared/utils";
 import {
+  getAddedAtTimestamp,
   getRateLimitMessage,
   isRateLimitItem,
   prependRateLimitItem,
@@ -26,11 +27,6 @@ import { log, logError } from "@/shared/utils/logger";
 const YOUR_EPISODES_ID = "YOUR_EPISODES_ID";
 
 type PodcastListItem = WithRateLimitItem<SpotifySavedShow>;
-
-const getAddedAtTimestamp = (value: string) => {
-  const timestamp = Date.parse(value);
-  return Number.isNaN(timestamp) ? 0 : timestamp;
-};
 
 export default function PodcastsScreen() {
   const podcasts = usePodcastsStore((s) => s.podcasts);
