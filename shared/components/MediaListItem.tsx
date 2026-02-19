@@ -12,6 +12,7 @@ interface MediaListItemProps {
   secondaryText?: string;
   imageUri?: string;
   placeholderIcon?: keyof typeof MaterialIcons.glyphMap;
+  forceShowImage?: boolean;
   disabled?: boolean;
   onPress: () => void;
   imageStyle?: StyleProp<ImageStyle>;
@@ -23,6 +24,7 @@ export const MediaListItem = React.memo(function MediaListItem({
   secondaryText,
   imageUri,
   placeholderIcon = "music-note",
+  forceShowImage = false,
   disabled = false,
   onPress,
   imageStyle,
@@ -32,6 +34,7 @@ export const MediaListItem = React.memo(function MediaListItem({
   const [imageError, setImageError] = useState(false);
 
   const showPlaceholder = !imageUri || imageError;
+  const shouldShowImage = forceShowImage || !hideAlbumCovers;
 
   return (
     <HapticPressable
@@ -43,7 +46,7 @@ export const MediaListItem = React.memo(function MediaListItem({
         style,
       ]}
     >
-      {!hideAlbumCovers &&
+      {shouldShowImage &&
         (showPlaceholder ? (
           <View style={[styles.placeholderImageContainer, imageStyle]}>
             <MaterialIcons

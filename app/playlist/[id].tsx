@@ -341,6 +341,7 @@ export default function PlaylistDetailScreen() {
 
       return (
         <MediaListItem
+          forceShowImage
           imageUri={track.album?.images?.[0]?.url}
           onPress={() => handleTrackPress(index)}
           placeholderIcon="music-note"
