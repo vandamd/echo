@@ -84,7 +84,7 @@ const defaultSettings: BooleanSettings = {
 
 const defaultSortSettings: LibrarySortSettings = {
   albumSortOrder: "creator",
-  podcastSortOrder: "creator",
+  podcastSortOrder: "alphabetical",
 };
 
 interface SettingsContextType {
