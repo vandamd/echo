@@ -71,24 +71,29 @@ export default function LikedSongsScreen() {
       }
 
       const likedSongsUri = "spotify:collection:tracks";
+      const track = item.track;
+      const artistName = getArtistNames(track.artists ?? []);
+      const albumArtUrl = track.album?.images?.[0]?.url ?? "";
+      const playingParams = {
+        trackName: track.name ?? "",
+        artistName,
+        albumArtUrl,
+        durationMs: track.duration_ms?.toString() ?? "0",
+        sourceContext: "liked",
+      };
 
       try {
-        const track = item.track;
-        const artistName = getArtistNames(track.artists ?? []);
-        const albumArtUrl = track.album?.images?.[0]?.url ?? "";
         await playUriWithSkipToUri(likedSongsUri, item.track.uri);
         router.push({
           pathname: "/playing",
-          params: {
-            trackName: track.name ?? "",
-            artistName,
-            albumArtUrl,
-            durationMs: track.duration_ms?.toString() ?? "0",
-          },
+          params: playingParams,
         });
       } catch (error) {
         logError("Error playing track:", error);
-        router.push("/playing");
+        router.push({
+          pathname: "/playing",
+          params: playingParams,
+        });
       }
     }
   );
