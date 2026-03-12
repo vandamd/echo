@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/features/auth";
 import { useNetworkState } from "@/shared/hooks";
 import { logInfo } from "@/shared/utils/logger";
@@ -13,6 +13,7 @@ export const useLibraryInit = () => {
   const { accessToken, isLoading: authLoading } = useAuth();
   const { isOnline, isLoading: networkLoading } = useNetworkState();
   const initialFetchDone = useRef(false);
+  const [hasHydratedCache, setHasHydratedCache] = useState(false);
 
   useEffect(() => {
     if (!accessToken) {
@@ -22,12 +23,20 @@ export const useLibraryInit = () => {
 
   useEffect(() => {
     const load = async () => {
-      const cached = await loadCachedData();
-      usePlaylistsStore.getState().setPlaylists(cached.playlists);
-      useAlbumsStore.getState().setAlbums(cached.albums);
-      usePodcastsStore.getState().setPodcasts(cached.podcasts);
-      useSavedTracksStore.getState().setSavedTracks(cached.savedTracks);
-      useSavedEpisodesStore.getState().setSavedEpisodes(cached.savedEpisodes);
+      try {
+        const cached = await loadCachedData();
+        usePlaylistsStore.getState().setPlaylists(cached.playlists);
+        useAlbumsStore.getState().setAlbums(cached.albums);
+        usePodcastsStore.getState().setPodcasts(cached.podcasts);
+        useSavedTracksStore.getState().hydrateSavedTracks({
+          savedTracks: cached.savedTracks,
+          nextUrl: cached.savedTracksNextUrl,
+          pageCount: cached.savedTracksPageCount,
+        });
+        useSavedEpisodesStore.getState().setSavedEpisodes(cached.savedEpisodes);
+      } finally {
+        setHasHydratedCache(true);
+      }
     };
     load();
   }, []);
@@ -37,7 +46,8 @@ export const useLibraryInit = () => {
       !accessToken ||
       authLoading ||
       initialFetchDone.current ||
-      networkLoading
+      networkLoading ||
+      !hasHydratedCache
     ) {
       return;
     }
@@ -58,5 +68,5 @@ export const useLibraryInit = () => {
       initialFetchDone.current = true;
       logInfo("LibraryInit: Initial data fetch completed");
     });
-  }, [accessToken, authLoading, isOnline, networkLoading]);
+  }, [accessToken, authLoading, hasHydratedCache, isOnline, networkLoading]);
 };

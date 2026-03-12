@@ -3,6 +3,7 @@ import { useCallback, useMemo } from "react";
 import { View } from "react-native";
 import { useAuth } from "@/features/auth";
 import { useSavedTracksStore } from "@/features/library/stores";
+import { getSavedTrackIdentity } from "@/features/library/utils/savedTracks";
 import { usePlayback } from "@/features/playback";
 import {
   ListScreen,
@@ -24,8 +25,6 @@ import {
 } from "@/shared/utils";
 
 type LikedSongsListItem = WithRateLimitItem<SavedTrackObject>;
-const getSavedTrackKey = (item: SavedTrackObject): string =>
-  `${item.added_at}-${item.track?.id ?? item.track?.uri ?? "unknown"}`;
 
 export default function LikedSongsScreen() {
   const { isLoading } = useAuth();
@@ -34,6 +33,7 @@ export default function LikedSongsScreen() {
   const isRefreshing = useSavedTracksStore((s) => s.isRefreshing);
   const isFetching = useSavedTracksStore((s) => s.isFetching);
   const fetchMore = useSavedTracksStore((s) => s.fetchMore);
+  const hasMoreCachedPages = useSavedTracksStore((s) => s.hasMoreCachedPages);
   const isLoadingMore = useSavedTracksStore((s) => s.isLoadingMore);
   const isRateLimited = useSavedTracksStore((s) => s.isRateLimited);
   const rateLimitRetryAt = useSavedTracksStore((s) => s.rateLimitRetryAt);
@@ -65,11 +65,7 @@ export default function LikedSongsScreen() {
   );
 
   const handleTrackPress = usePreventDoubleTap(
-    async (item: SavedTrackObject, isDisabled: boolean) => {
-      if (isDisabled) {
-        return;
-      }
-
+    async (item: SavedTrackObject) => {
       const likedSongsUri = "spotify:collection:tracks";
       const track = item.track;
       const artistName = getArtistNames(track.artists ?? []);
@@ -108,17 +104,14 @@ export default function LikedSongsScreen() {
       return null;
     }
 
-    const isDisabled = !isOnline;
-
     return (
       <MediaListItem
-        disabled={isDisabled}
         imageUri={
           item.track.album?.images && item.track.album.images.length > 0
             ? item.track.album.images[0].url
             : undefined
         }
-        onPress={() => handleTrackPress(item, isDisabled)}
+        onPress={() => handleTrackPress(item)}
         placeholderIcon="music-note"
         primaryText={item.track.name}
         secondaryText={getArtistNames(item.track.artists)}
@@ -139,8 +132,11 @@ export default function LikedSongsScreen() {
   }
 
   const handleLoadMore = () => {
-    if (isOnline && nextUrl && !isLoadingMore) {
-      fetchMore();
+    if (
+      !isLoadingMore &&
+      ((isOnline && nextUrl) || (!isOnline && hasMoreCachedPages))
+    ) {
+      fetchMore({ isOnline });
     }
   };
 
@@ -159,12 +155,13 @@ export default function LikedSongsScreen() {
       isOnline={isOnline}
       isRefreshing={isRefreshing}
       keyExtractor={(item: LikedSongsListItem) =>
-        isRateLimitItem(item) ? item.id : getSavedTrackKey(item)
+        isRateLimitItem(item) ? item.id : getSavedTrackIdentity(item)
       }
       onLoadMore={handleLoadMore}
       onRefresh={handleRefresh}
       refreshEnabled={isOnline === true}
       renderItem={renderTrackItem}
+      showLoadMoreFooter={false}
       title="Liked Songs"
     />
   );

@@ -17,6 +17,7 @@ interface ListScreenProps<T> {
   emptyMessage: string;
   onLoadMore?: () => void;
   isLoadingMore?: boolean;
+  showLoadMoreFooter?: boolean;
   isOnline?: boolean;
   refreshEnabled?: boolean;
   headerLeftIcon?: keyof typeof MaterialIcons.glyphMap;
@@ -35,6 +36,7 @@ export function ListScreen<T>({
   emptyMessage,
   onLoadMore,
   isLoadingMore,
+  showLoadMoreFooter = true,
   isOnline,
   refreshEnabled = true,
   headerLeftIcon,
@@ -91,7 +93,7 @@ export function ListScreen<T>({
   }
 
   const renderFooter = () => {
-    if (!isLoadingMore) {
+    if (!(isLoadingMore && showLoadMoreFooter)) {
       return null;
     }
     return <View style={{ paddingVertical: n(20) }} />;

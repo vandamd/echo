@@ -4,25 +4,133 @@ import type {
   SpotifyPaginatedResponse,
 } from "@/shared/types/spotify";
 import { apiGetWithStatus } from "@/shared/utils/api-client";
-import { saveCachedData } from "../utils/cache";
+import {
+  appendSavedTracksPage,
+  loadSavedTracksCache,
+  replaceSavedTracksFirstPage,
+} from "../utils/cache";
 
 interface SavedTracksState {
   savedTracks: SavedTrackObject[] | null;
   nextUrl: string | null;
+  cachedPageCount: number;
+  visiblePageCount: number;
+  hasMoreCachedPages: boolean;
   isRefreshing: boolean;
   isFetching: boolean;
   isLoadingMore: boolean;
   isRateLimited: boolean;
   rateLimitRetryAt: number | null;
   fetch: (options?: { showRefreshing?: boolean }) => Promise<void>;
-  fetchMore: () => Promise<void>;
-  setSavedTracks: (savedTracks: SavedTrackObject[] | null) => void;
+  fetchMore: (options: { isOnline: boolean }) => Promise<void>;
+  hydrateSavedTracks: (options: {
+    savedTracks: SavedTrackObject[] | null;
+    nextUrl: string | null;
+    pageCount: number;
+  }) => void;
   reset: () => void;
 }
+
+type SavedTracksPaginationState = Pick<
+  SavedTracksState,
+  | "savedTracks"
+  | "nextUrl"
+  | "cachedPageCount"
+  | "visiblePageCount"
+  | "hasMoreCachedPages"
+  | "isRateLimited"
+  | "rateLimitRetryAt"
+>;
+
+const getHasMoreCachedPages = (
+  visiblePageCount: number,
+  cachedPageCount: number
+): boolean => visiblePageCount < cachedPageCount;
+
+const createSavedTracksPaginationState = (
+  savedTracks: SavedTrackObject[] | null,
+  nextUrl: string | null,
+  pageCount: number,
+  visiblePageCount: number
+): SavedTracksPaginationState => ({
+  savedTracks,
+  nextUrl,
+  cachedPageCount: pageCount,
+  visiblePageCount,
+  hasMoreCachedPages: getHasMoreCachedPages(visiblePageCount, pageCount),
+  isRateLimited: false,
+  rateLimitRetryAt: null,
+});
+
+const loadCachedSavedTracksMore = async (
+  visiblePageCount: number
+): Promise<SavedTracksPaginationState> => {
+  const cachedSavedTracks = await loadSavedTracksCache({
+    visiblePageCount: visiblePageCount + 1,
+  });
+  const nextVisiblePageCount = Math.min(
+    visiblePageCount + 1,
+    cachedSavedTracks.pageCount
+  );
+
+  return createSavedTracksPaginationState(
+    cachedSavedTracks.savedTracks ?? [],
+    cachedSavedTracks.nextUrl,
+    cachedSavedTracks.pageCount,
+    nextVisiblePageCount
+  );
+};
+
+const loadRemoteSavedTracksMore = async (
+  nextUrl: string,
+  visiblePageCount: number
+): Promise<
+  | { kind: "success"; state: SavedTracksPaginationState }
+  | { kind: "rate_limited"; retryAt: number | null }
+  | null
+> => {
+  const result =
+    await apiGetWithStatus<SpotifyPaginatedResponse<SavedTrackObject>>(nextUrl);
+  const data = result.data;
+
+  if (!data) {
+    if (result.status === 429) {
+      return {
+        kind: "rate_limited",
+        retryAt:
+          result.retryAfterMs !== null
+            ? Date.now() + result.retryAfterMs
+            : null,
+      };
+    }
+
+    return null;
+  }
+
+  const nextVisiblePageCount = visiblePageCount + 1;
+  const cachedSavedTracks = await appendSavedTracksPage(
+    data.items,
+    data.next,
+    nextVisiblePageCount
+  );
+
+  return {
+    kind: "success",
+    state: createSavedTracksPaginationState(
+      cachedSavedTracks.savedTracks ?? [],
+      cachedSavedTracks.nextUrl,
+      cachedSavedTracks.pageCount,
+      Math.min(nextVisiblePageCount, cachedSavedTracks.pageCount)
+    ),
+  };
+};
 
 export const useSavedTracksStore = create<SavedTracksState>()((set, get) => ({
   savedTracks: null,
   nextUrl: null,
+  cachedPageCount: 0,
+  visiblePageCount: 0,
+  hasMoreCachedPages: false,
   isRefreshing: false,
   isFetching: false,
   isLoadingMore: false,
@@ -42,13 +150,19 @@ export const useSavedTracksStore = create<SavedTracksState>()((set, get) => ({
       >("https://api.spotify.com/v1/me/tracks?limit=50");
       const data = result.data;
       if (data) {
-        set({
-          savedTracks: data.items,
-          nextUrl: data.next,
-          isRateLimited: false,
-          rateLimitRetryAt: null,
-        });
-        await saveCachedData({ tracks: data.items });
+        const cachedSavedTracks = await replaceSavedTracksFirstPage(
+          data.items,
+          data.next,
+          1
+        );
+        set(
+          createSavedTracksPaginationState(
+            cachedSavedTracks.savedTracks ?? [],
+            cachedSavedTracks.nextUrl,
+            cachedSavedTracks.pageCount,
+            cachedSavedTracks.pageCount > 0 ? 1 : 0
+          )
+        );
       } else if (result.status === 429) {
         set({
           isRateLimited: true,
@@ -61,6 +175,9 @@ export const useSavedTracksStore = create<SavedTracksState>()((set, get) => ({
         set({
           savedTracks: [],
           nextUrl: null,
+          cachedPageCount: 0,
+          visiblePageCount: 0,
+          hasMoreCachedPages: false,
           isRateLimited: false,
           rateLimitRetryAt: null,
         });
@@ -74,41 +191,70 @@ export const useSavedTracksStore = create<SavedTracksState>()((set, get) => ({
     }
   },
 
-  fetchMore: async () => {
-    const { nextUrl, isLoadingMore } = get();
-    if (!nextUrl || isLoadingMore) {
+  fetchMore: async ({ isOnline }) => {
+    const {
+      nextUrl,
+      isLoadingMore,
+      isFetching,
+      visiblePageCount,
+      cachedPageCount,
+    } = get();
+    if (isLoadingMore || isFetching) {
       return;
     }
-    set({ isLoadingMore: true });
-    const result =
-      await apiGetWithStatus<SpotifyPaginatedResponse<SavedTrackObject>>(
-        nextUrl
-      );
-    const data = result.data;
-    if (data) {
-      set((state) => ({
-        savedTracks: [...(state.savedTracks || []), ...data.items],
-        nextUrl: data.next,
-        isRateLimited: false,
-        rateLimitRetryAt: null,
-      }));
-    } else if (result.status === 429) {
-      set({
-        isRateLimited: true,
-        rateLimitRetryAt:
-          result.retryAfterMs !== null
-            ? Date.now() + result.retryAfterMs
-            : null,
-      });
+
+    if (!isOnline) {
+      if (visiblePageCount >= cachedPageCount) {
+        return;
+      }
+
+      set({ isLoadingMore: true });
+      try {
+        set(await loadCachedSavedTracksMore(visiblePageCount));
+      } finally {
+        set({ isLoadingMore: false });
+      }
+      return;
     }
-    set({ isLoadingMore: false });
+
+    if (!nextUrl) {
+      return;
+    }
+
+    set({ isLoadingMore: true });
+    try {
+      const nextState = await loadRemoteSavedTracksMore(
+        nextUrl,
+        visiblePageCount
+      );
+      if (nextState?.kind === "success") {
+        set(nextState.state);
+      } else if (nextState?.kind === "rate_limited") {
+        set({
+          isRateLimited: true,
+          rateLimitRetryAt: nextState.retryAt,
+        });
+      }
+    } finally {
+      set({ isLoadingMore: false });
+    }
   },
 
-  setSavedTracks: (savedTracks) => set({ savedTracks }),
+  hydrateSavedTracks: ({ savedTracks, nextUrl, pageCount }) =>
+    set({
+      savedTracks,
+      nextUrl,
+      cachedPageCount: pageCount,
+      visiblePageCount: pageCount > 0 ? 1 : 0,
+      hasMoreCachedPages: pageCount > 1,
+    }),
   reset: () =>
     set({
       savedTracks: null,
       nextUrl: null,
+      cachedPageCount: 0,
+      visiblePageCount: 0,
+      hasMoreCachedPages: false,
       isRefreshing: false,
       isFetching: false,
       isLoadingMore: false,
