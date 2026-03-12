@@ -47,6 +47,8 @@ class SpotifySdkModule : Module() {
     const val AUTH_TOKEN_REQUEST_CODE = 1338
     const val AUTH_CODE_REQUEST_CODE = 1339
     const val TAG = "SpotifySdkModule"
+    const val HIDDEN_PLAY_URI_METHOD = "com.spotify.play_uri"
+    const val APP_REMOTE_FEATURE_IDENTIFIER = "app_remote"
   }
 
   override fun definition() = ModuleDefinition {
@@ -185,6 +187,51 @@ class SpotifySdkModule : Module() {
         }
       } catch (e: Exception) {
         promise.reject("PLAY_ERROR", e.message, e)
+      }
+    }
+
+    AsyncFunction("playUriWithSkipToUri") { uri: String, skipToUri: String, promise: Promise ->
+      try {
+        val remote = spotifyAppRemote
+        if (remote?.isConnected != true) {
+          promise.reject("NOT_CONNECTED", "Spotify not connected", null)
+          return@AsyncFunction
+        }
+
+        val remoteClient = extractRemoteClient(remote)
+        if (remoteClient == null) {
+          promise.reject(
+            "REMOTE_CLIENT_UNAVAILABLE",
+            "Remote client is unavailable.",
+            null
+          )
+          return@AsyncFunction
+        }
+
+        val requestPayload = linkedMapOf(
+          "uri" to uri,
+          "skipToURI" to skipToUri,
+          "feature_identifier" to APP_REMOTE_FEATURE_IDENTIFIER
+        )
+
+        remoteClient.call(HIDDEN_PLAY_URI_METHOD, requestPayload, Any::class.java)
+          .setResultCallback {
+            promise.resolve(mapOf("playing" to true))
+          }
+          .setErrorCallback { primaryError ->
+            remoteClient.call(HIDDEN_PLAY_URI_METHOD, requestPayload, Message::class.java)
+              .setResultCallback {
+                promise.resolve(mapOf("playing" to true))
+              }
+              .setErrorCallback { fallbackError ->
+                val errorMessage =
+                  "Hidden play_uri call failed: ${primaryError.message ?: "unknown"}; " +
+                    "fallback failed: ${fallbackError.message ?: "unknown"}"
+                promise.reject("PLAY_URI_WITH_SKIP_ERROR", errorMessage, fallbackError)
+              }
+          }
+      } catch (e: Exception) {
+        promise.reject("PLAY_URI_WITH_SKIP_ERROR", e.message, e)
       }
     }
 
@@ -519,6 +566,17 @@ class SpotifySdkModule : Module() {
               "canSeek" to playerState.playbackRestrictions.canSeek
             )
     )
+  }
+
+  private fun extractRemoteClient(
+    remote: SpotifyAppRemote
+  ): com.spotify.protocol.client.RemoteClient? = try {
+    val field = SpotifyAppRemote::class.java.getDeclaredField("mRemoteClient")
+    field.isAccessible = true
+    field.get(remote) as? com.spotify.protocol.client.RemoteClient
+  } catch (e: Exception) {
+    Log.w(TAG, "Unable to access SpotifyAppRemote.mRemoteClient", e)
+    null
   }
 
   private fun handleActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

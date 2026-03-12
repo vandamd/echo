@@ -26,6 +26,10 @@ declare class SpotifySdkModule extends NativeModule<SpotifySdkEvents> {
   disconnect(): Promise<{ disconnected: boolean }>;
   isConnected(): Promise<boolean>;
   play(uri?: string): Promise<{ playing: boolean }>;
+  playUriWithSkipToUri(
+    uri: string,
+    skipToUri: string
+  ): Promise<{ playing: boolean }>;
   pause(): Promise<{ paused: boolean }>;
   resume(): Promise<{ resumed: boolean }>;
   skipNext(): Promise<{ skipped: boolean }>;

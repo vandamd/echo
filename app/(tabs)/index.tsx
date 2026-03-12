@@ -38,8 +38,7 @@ export default function LikedSongsScreen() {
   const isRateLimited = useSavedTracksStore((s) => s.isRateLimited);
   const rateLimitRetryAt = useSavedTracksStore((s) => s.rateLimitRetryAt);
   const nextUrl = useSavedTracksStore((s) => s.nextUrl);
-  const { playTrackWithContext, getPlaybackState, toggleShuffle } =
-    usePlayback();
+  const { playUriWithSkipToUri } = usePlayback();
   const router = useRouter();
   const { isLoading: isNetworkLoading, isOnline } = useNetworkState();
 
@@ -60,64 +59,24 @@ export default function LikedSongsScreen() {
     () => (filteredTracks.length > 0 ? filteredTracks : (savedTracks ?? [])),
     [filteredTracks, savedTracks]
   );
-  const trackIndicesByKey = useMemo(() => {
-    const indices = new Map<string, number>();
-    for (const [index, track] of baseTracks.entries()) {
-      if (!track.track) {
-        continue;
-      }
-      indices.set(getSavedTrackKey(track), index);
-    }
-    return indices;
-  }, [baseTracks]);
   const rateLimitMessage = useMemo(
     () => getRateLimitMessage("liked songs", rateLimitRetryAt),
     [rateLimitRetryAt]
   );
 
   const handleTrackPress = usePreventDoubleTap(
-    async (
-      item: SavedTrackObject,
-      index: number,
-      sourceTracks: SavedTrackObject[],
-      isDisabled: boolean
-    ) => {
+    async (item: SavedTrackObject, isDisabled: boolean) => {
       if (isDisabled) {
         return;
       }
 
-      if (sourceTracks.length === 0) {
-        return;
-      }
-
-      const collectionUri = "spotify:collection:tracks";
+      const likedSongsUri = "spotify:collection:tracks";
 
       try {
         const track = item.track;
         const artistName = getArtistNames(track.artists ?? []);
         const albumArtUrl = track.album?.images?.[0]?.url ?? "";
-
-        let wasShuffling = false;
-        try {
-          const playbackState = await getPlaybackState();
-          wasShuffling = !!playbackState?.shuffle_state;
-        } catch {
-          logWarn(
-            "Could not get playback state, proceeding without shuffle workaround"
-          );
-        }
-        if (wasShuffling) {
-          await toggleShuffle(false);
-        }
-        await playTrackWithContext(item.track.uri, {
-          type: "liked",
-          uri: collectionUri,
-          tracks: sourceTracks,
-          currentIndex: index,
-        });
-        if (wasShuffling) {
-          await toggleShuffle(true);
-        }
+        await playUriWithSkipToUri(likedSongsUri, item.track.uri);
         router.push({
           pathname: "/playing",
           params: {
@@ -145,14 +104,6 @@ export default function LikedSongsScreen() {
     }
 
     const isDisabled = !isOnline;
-    const trackKey = getSavedTrackKey(item);
-    const trackIndex = trackIndicesByKey.get(trackKey);
-    if (trackIndex === undefined) {
-      logWarn("Could not resolve track index for liked song", {
-        key: trackKey,
-      });
-      return null;
-    }
 
     return (
       <MediaListItem
@@ -162,9 +113,7 @@ export default function LikedSongsScreen() {
             ? item.track.album.images[0].url
             : undefined
         }
-        onPress={() =>
-          handleTrackPress(item, trackIndex, baseTracks, isDisabled)
-        }
+        onPress={() => handleTrackPress(item, isDisabled)}
         placeholderIcon="music-note"
         primaryText={item.track.name}
         secondaryText={getArtistNames(item.track.artists)}

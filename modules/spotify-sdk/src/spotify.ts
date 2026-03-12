@@ -46,6 +46,11 @@ class SpotifySDK {
     await SpotifySdkNative.play(uri);
   }
 
+  async playUriWithSkipToUri(uri: string, skipToUri: string): Promise<void> {
+    await this.ensureConnected();
+    await SpotifySdkNative.playUriWithSkipToUri(uri, skipToUri);
+  }
+
   async pause(): Promise<void> {
     await this.ensureConnected();
     await SpotifySdkNative.pause();

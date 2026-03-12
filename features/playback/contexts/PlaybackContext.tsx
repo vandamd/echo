@@ -24,6 +24,7 @@ import {
   pausePlayback as pausePlaybackService,
   playTracksWithWebApi as playTracksWithWebApiService,
   playTrackWithContext as playTrackWithContextService,
+  playUriWithSkipToUri as playUriWithSkipToUriService,
   removeFromLibrary as removeFromLibraryService,
   seekToPosition as seekToPositionService,
   skipToIndex as skipToIndexService,
@@ -53,6 +54,7 @@ export interface PlaybackContextType {
     trackUri: string,
     sourceContext?: SourceContext
   ) => Promise<void>;
+  playUriWithSkipToUri: (uri: string, skipToUri: string) => Promise<void>;
   playTracksWithWebApi: (uris: string[]) => Promise<void>;
   skipToIndex: (sourceContext: SourceContext) => Promise<void>;
 
@@ -93,6 +95,10 @@ export const PlaybackProvider = ({ children }: { children: ReactNode }) => {
     },
     [ensureValidToken]
   );
+
+  const playUriWithSkipToUri = useCallback((uri: string, skipToUri: string) => {
+    return playUriWithSkipToUriService(uri, skipToUri);
+  }, []);
 
   const skipToIndex = useCallback((sourceContext: SourceContext) => {
     return skipToIndexService(sourceContext);
@@ -166,6 +172,7 @@ export const PlaybackProvider = ({ children }: { children: ReactNode }) => {
       isConnectedToAppRemote,
       playTracksWithWebApi,
       playTrackWithContext,
+      playUriWithSkipToUri,
       skipToIndex,
       getPlaybackState,
       getCurrentTrack,
@@ -186,6 +193,7 @@ export const PlaybackProvider = ({ children }: { children: ReactNode }) => {
       isConnectedToAppRemote,
       playTracksWithWebApi,
       playTrackWithContext,
+      playUriWithSkipToUri,
       skipToIndex,
       getPlaybackState,
       getCurrentTrack,

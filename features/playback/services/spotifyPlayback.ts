@@ -171,6 +171,19 @@ export const playTracksWithWebApi = async (
   throw new Error(`Web API context failed: ${errorText}`);
 };
 
+export const playUriWithSkipToUri = async (
+  uri: string,
+  skipToUri: string
+): Promise<void> => {
+  log("Playback: Playing URI with skipToURI:", { uri, skipToUri });
+  try {
+    await spotify.playUriWithSkipToUri(uri, skipToUri);
+  } catch (error) {
+    logError("Playback: Error in playUriWithSkipToUri:", error);
+    throw error;
+  }
+};
+
 export const getPlaybackState =
   async (): Promise<SpotifyCurrentlyPlaying | null> => {
     try {
