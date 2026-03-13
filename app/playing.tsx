@@ -88,6 +88,7 @@ interface PlayingRouteParams {
   durationMs?: string;
   sourceContext?: string;
 }
+const ROUTE_PLAYBACK_TIMEOUT_MS = 4000;
 
 const formatTime = (ms: number | null | undefined): string => {
   if (ms === null || ms === undefined) {
@@ -198,6 +199,9 @@ export default function PlayingScreen() {
 
   const [playbackState, setPlaybackState] =
     useState<SpotifyCurrentlyPlaying | null>(initialState);
+  const [isRoutePlaybackPending, setIsRoutePlaybackPending] = useState(
+    paramsState !== null
+  );
   const [isCurrentTrackSaved, setIsCurrentTrackSaved] = useState(false);
   const [pendingSaveOperation, setPendingSaveOperation] = useState(false);
   const [optimisticSaveState, setOptimisticSaveState] = useState<
@@ -210,17 +214,21 @@ export default function PlayingScreen() {
   const isFocusedRef = useRef(true);
   const lastCheckedTrackUriRef = useRef<string | null>(null);
   const pausePollingUntilRef = useRef<number | null>(null);
+  const routePlaybackExpiresAtRef = useRef<number | null>(
+    paramsState !== null ? Date.now() + ROUTE_PLAYBACK_TIMEOUT_MS : null
+  );
 
   useEffect(() => {
     appStateRef.current = appState;
   }, [appState]);
 
+  const clearPendingRoutePlayback = useCallback(() => {
+    routePlaybackExpiresAtRef.current = null;
+    setIsRoutePlaybackPending(false);
+  }, []);
+
   const routeTrackKey = getRouteTrackKey(params);
-  const playbackTrackKey = getPlaybackTrackKey(playbackState);
-  const isPendingRoutePlayback =
-    paramsState !== null &&
-    routeTrackKey !== null &&
-    routeTrackKey !== playbackTrackKey;
+  const isPendingRoutePlayback = isRoutePlaybackPending && paramsState !== null;
   const isPendingLikedSongPlayback =
     isPendingRoutePlayback && params.sourceContext === "liked";
   const visiblePlaybackState = isPendingRoutePlayback
@@ -287,6 +295,16 @@ export default function PlayingScreen() {
 
   const fetchAndUpdatePlaybackState = useCallback(async () => {
     const state = (await getPlaybackState()) as SpotifyCurrentlyPlaying | null;
+    const playbackTrackKey = getPlaybackTrackKey(state);
+
+    if (
+      isRoutePlaybackPending &&
+      (playbackTrackKey === routeTrackKey ||
+        (routePlaybackExpiresAtRef.current !== null &&
+          Date.now() >= routePlaybackExpiresAtRef.current))
+    ) {
+      clearPendingRoutePlayback();
+    }
 
     if (state) {
       cachedPlaybackState = state;
@@ -307,7 +325,14 @@ export default function PlayingScreen() {
     await checkIfTrackIsSaved(state);
 
     return state;
-  }, [checkIfTrackIsSaved, getPlaybackState, progress]);
+  }, [
+    checkIfTrackIsSaved,
+    clearPendingRoutePlayback,
+    getPlaybackState,
+    isRoutePlaybackPending,
+    progress,
+    routeTrackKey,
+  ]);
 
   const handlePlayPause = async () => {
     if (!playbackState) {
@@ -329,6 +354,7 @@ export default function PlayingScreen() {
   const handleSkipToNext = async () => {
     try {
       await skipToNext();
+      clearPendingRoutePlayback();
       await fetchAndUpdatePlaybackState();
     } catch (error) {
       logError("Error skipping to next track:", error);
@@ -338,6 +364,7 @@ export default function PlayingScreen() {
   const handleSkipToPrevious = async () => {
     try {
       await skipToPrevious();
+      clearPendingRoutePlayback();
       await fetchAndUpdatePlaybackState();
     } catch (error) {
       logError("Error skipping to previous track:", error);
