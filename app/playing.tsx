@@ -933,10 +933,6 @@ export default function PlayingScreen() {
 }
 
 const styles = StyleSheet.create({
-  centered: {
-    justifyContent: "center",
-    alignItems: "center",
-  },
   content: {
     flex: 1,
     width: "100%",
@@ -947,7 +943,6 @@ const styles = StyleSheet.create({
     flex: 1,
     width: "100%",
     alignItems: "center",
-    justifyContent: "center",
   },
   albumArt: {
     width: n(200),
