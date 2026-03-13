@@ -15,7 +15,7 @@ import {
   useSaveStatus,
 } from "@/shared/hooks";
 import type { SpotifyAlbum, SpotifyTrackSimple } from "@/shared/types/spotify";
-import { log, logError, n } from "@/shared/utils";
+import { consumeAlbumNavigationImage, log, logError, n } from "@/shared/utils";
 import { apiGet } from "@/shared/utils/api-client";
 
 export default function AlbumDetailScreen() {
@@ -36,6 +36,7 @@ export default function AlbumDetailScreen() {
   const initialAlbum = albumString
     ? (JSON.parse(albumString) as SpotifyAlbum)
     : null;
+  const [navigationImageUrl] = useState(() => consumeAlbumNavigationImage(id));
 
   const [album, setAlbum] = useState<SpotifyAlbum | null>(initialAlbum);
   const [error, setError] = useState<string | null>(null);
@@ -192,6 +193,7 @@ export default function AlbumDetailScreen() {
         headerIcon={isAlbumSaved ? "remove" : "add"}
         headerIconPress={handleToggleAlbumSave}
         headerIconShowLength={isCheckingAlbumSaved ? 0 : 1}
+        imageUrl={navigationImageUrl}
         isInitialLoading={isInitialLoading}
         keyExtractor={(_item, index) => index.toString()}
         placeholderIcon="album"
@@ -236,7 +238,7 @@ export default function AlbumDetailScreen() {
       headerIcon={isAlbumSaved ? "remove" : "add"}
       headerIconPress={handleToggleAlbumSave}
       headerIconShowLength={isCheckingAlbumSaved ? 0 : 1}
-      imageUrl={album.images?.[0]?.url}
+      imageUrl={album.images?.[0]?.url || navigationImageUrl}
       isInitialLoading={isInitialLoading}
       isLoadingMore={isLoadingMoreTracks}
       keyExtractor={(item, index) => item.id || index.toString()}

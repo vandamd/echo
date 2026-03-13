@@ -24,7 +24,13 @@ import type {
   SpotifyEpisode,
   SpotifyTrackSimple,
 } from "@/shared/types/spotify";
-import { getArtistNames, log, logError, n } from "@/shared/utils";
+import {
+  getArtistNames,
+  log,
+  logError,
+  n,
+  setAlbumNavigationImage,
+} from "@/shared/utils";
 
 function MarqueeText({
   children,
@@ -606,6 +612,9 @@ export default function PlayingScreen() {
         },
       } as never);
     } else if (currentTrack?.album?.id) {
+      if (artworkUrl) {
+        setAlbumNavigationImage(currentTrack.album.id, artworkUrl);
+      }
       router.push({
         pathname: "/album/[id]",
         params: {

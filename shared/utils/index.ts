@@ -2,6 +2,7 @@ export * from "./api-client";
 export * from "./date";
 export * from "./formatters";
 export * from "./logger";
+export * from "./navigation-image-cache";
 export * from "./rate-limit-list-item";
 export * from "./rate-limit-message";
 export * from "./scaling";
