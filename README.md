@@ -4,6 +4,7 @@
 
 ![GitHub License](https://img.shields.io/github/license/vandamd/echo?)
 ![GitHub Release](https://img.shields.io/github/v/release/vandamd/echo?)
+[![Hypercommit](https://img.shields.io/badge/Hypercommit-DB2475)](https://hypercommit.com/echo)
 
 > [!NOTE]
 > There are a few steps required to complete before you can use Echo. Please read the [Setup](#setup) section below.
