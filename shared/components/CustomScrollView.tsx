@@ -1,6 +1,7 @@
-import { useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   Animated,
+  type FlatList,
   type FlatListProps,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
@@ -10,16 +11,19 @@ import {
 import { useSettings } from "@/features/settings";
 import { n } from "@/shared/utils";
 
-interface CustomScrollViewProps<T = unknown> extends FlatListProps<T> {}
+export interface CustomScrollViewProps<T = unknown> extends FlatListProps<T> {}
 
-const CustomScrollView = <T,>({
-  style,
-  contentContainerStyle,
-  onScroll: onScrollProp,
-  onContentSizeChange: onContentSizeChangeProp,
-  onLayout: onLayoutProp,
-  ...rest
-}: CustomScrollViewProps<T>) => {
+function CustomScrollViewInner<T>(
+  {
+    style,
+    contentContainerStyle,
+    onScroll: onScrollProp,
+    onContentSizeChange: onContentSizeChangeProp,
+    onLayout: onLayoutProp,
+    ...rest
+  }: CustomScrollViewProps<T>,
+  ref: React.Ref<FlatList<T>>
+) {
   const { invertColors } = useSettings();
   const [contentHeight, setContentHeight] = useState<number>(0);
   const [scrollViewHeight, setScrollViewHeight] = useState<number>(0);
@@ -60,7 +64,9 @@ const CustomScrollView = <T,>({
       style={styles.container}
     >
       <Animated.FlatList
-        {...(rest as FlatListProps<unknown>)}
+        // @ts-expect-error type mismatch with Animated.FlatList ref
+        ref={ref}
+        {...rest}
         contentContainerStyle={[{ flexGrow: 1 }, contentContainerStyle]}
         onContentSizeChange={(width: number, height: number) => {
           setContentHeight(height);
@@ -99,7 +105,11 @@ const CustomScrollView = <T,>({
       )}
     </View>
   );
-};
+}
+
+const CustomScrollView = React.forwardRef(CustomScrollViewInner) as <T>(
+  props: CustomScrollViewProps<T> & { ref?: React.Ref<FlatList<T>> }
+) => React.ReactElement;
 
 const styles = StyleSheet.create({
   container: {

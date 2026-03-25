@@ -159,6 +159,7 @@ export default function PlayingScreen() {
     hideLikeButton,
     hideDevicesButton,
     hideAddToPlaylistButton,
+    hideLyricsButton,
     hidePlayingCover,
   } = useSettings();
   const { isOnline } = useNetworkState();
@@ -532,6 +533,28 @@ export default function PlayingScreen() {
     }
   });
 
+  const handleNavigateToLyrics = usePreventDoubleTap(() => {
+    if (
+      playbackState?.item &&
+      playbackState.currently_playing_type === "track" &&
+      playbackState.item.type !== "episode"
+    ) {
+      const track = playbackState.item as SpotifyTrackSimple;
+      log("Navigating to lyrics with track:", track.name);
+      router.push({
+        pathname: "/lyrics",
+        params: {
+          trackName: track.name,
+          artistName: getArtistNames(track.artists),
+          albumName: track.album?.name,
+          durationMs: track.duration_ms?.toString(),
+        },
+      });
+    } else {
+      console.warn("Cannot navigate to lyrics: No track playing.");
+    }
+  });
+
   useFocusEffect(
     React.useCallback(() => {
       isFocusedRef.current = true;
@@ -591,6 +614,7 @@ export default function PlayingScreen() {
     !hideLikeButton,
     !hideDevicesButton,
     !hideAddToPlaylistButton,
+    !hideLyricsButton,
   ].filter(Boolean).length;
 
   const animatedWidth = progress.interpolate({
@@ -905,6 +929,23 @@ export default function PlayingScreen() {
               <MaterialIcons
                 color={invertColors ? "black" : "white"}
                 name={"devices"}
+                size={n(30)}
+              />
+            </HapticPressable>
+          )}
+          {!hideLyricsButton && (
+            <HapticPressable
+              disabled={!isOnline || isEpisode || isPendingRoutePlayback}
+              onPress={() => {
+                if (isOnline && !isEpisode && !isPendingRoutePlayback) {
+                  handleNavigateToLyrics();
+                }
+              }}
+              style={(!isOnline || isEpisode) && styles.disabledButton}
+            >
+              <MaterialIcons
+                color={invertColors ? "black" : "white"}
+                name="lyrics"
                 size={n(30)}
               />
             </HapticPressable>

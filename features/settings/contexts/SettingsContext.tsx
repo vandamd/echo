@@ -22,6 +22,7 @@ const SETTING_KEYS = {
   hideLikeButton: "hideLikeButton",
   hideDevicesButton: "hideDevicesButton",
   hideAddToPlaylistButton: "hideAddToPlaylistButton",
+  hideLyricsButton: "hideLyricsButton",
   hidePlayingCover: "hidePlayingCover",
   hideYourEpisodes: "hideYourEpisodes",
 } as const;
@@ -78,6 +79,7 @@ const defaultSettings: BooleanSettings = {
   hideLikeButton: false,
   hideDevicesButton: false,
   hideAddToPlaylistButton: false,
+  hideLyricsButton: false,
   hidePlayingCover: false,
   hideYourEpisodes: false,
 };
@@ -105,6 +107,8 @@ interface SettingsContextType {
   setHideDevicesButton: (value: boolean) => void;
   hideAddToPlaylistButton: boolean;
   setHideAddToPlaylistButton: (value: boolean) => void;
+  hideLyricsButton: boolean;
+  setHideLyricsButton: (value: boolean) => void;
   hidePlayingCover: boolean;
   setHidePlayingCover: (value: boolean) => void;
   hideYourEpisodes: boolean;
@@ -377,6 +381,10 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
     (v: boolean) => setSetting("hideAddToPlaylistButton", v),
     [setSetting]
   );
+  const setHideLyricsButton = useCallback(
+    (v: boolean) => setSetting("hideLyricsButton", v),
+    [setSetting]
+  );
   const setHidePlayingCover = useCallback(
     (v: boolean) => setSetting("hidePlayingCover", v),
     [setSetting]
@@ -470,6 +478,8 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       setHideDevicesButton,
       hideAddToPlaylistButton: settings.hideAddToPlaylistButton,
       setHideAddToPlaylistButton,
+      hideLyricsButton: settings.hideLyricsButton,
+      setHideLyricsButton,
       hidePlayingCover: settings.hidePlayingCover,
       setHidePlayingCover,
       hideYourEpisodes: settings.hideYourEpisodes,
@@ -494,6 +504,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       setHideLikeButton,
       setHideDevicesButton,
       setHideAddToPlaylistButton,
+      setHideLyricsButton,
       setHidePlayingCover,
       setHideYourEpisodes,
       sortSettings,

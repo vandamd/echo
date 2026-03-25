@@ -20,6 +20,8 @@ export default function CustomisePlayingScreen() {
     setHideDevicesButton,
     hideAddToPlaylistButton,
     setHideAddToPlaylistButton,
+    hideLyricsButton,
+    setHideLyricsButton,
     hidePlayingCover,
     setHidePlayingCover,
   } = useSettings();
@@ -48,6 +50,12 @@ export default function CustomisePlayingScreen() {
       label: "Hide Add to Playlist",
       value: hideAddToPlaylistButton,
       onValueChange: setHideAddToPlaylistButton,
+    },
+    {
+      type: "toggle",
+      label: "Hide Lyrics Button",
+      value: hideLyricsButton,
+      onValueChange: setHideLyricsButton,
     },
   ];
 

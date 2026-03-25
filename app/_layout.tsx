@@ -137,6 +137,7 @@ function RootNavigation() {
       <Stack.Screen name="login" />
       <Stack.Screen name="select-device" />
       <Stack.Screen name="add-to-playlist" />
+      <Stack.Screen name="lyrics" />
       <Stack.Screen name="create-playlist" />
       <Stack.Screen name="albums-sort" />
       <Stack.Screen name="podcasts-sort" />
