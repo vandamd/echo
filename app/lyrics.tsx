@@ -1,6 +1,11 @@
 import { useFocusEffect } from "expo-router";
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
-import { type FlatList, StyleSheet, View } from "react-native";
+import {
+  type FlatList,
+  type FlatListProps,
+  StyleSheet,
+  View,
+} from "react-native";
 import { usePlayback } from "@/features/playback";
 import ContentContainer from "@/shared/components/ContentContainer";
 import CustomScrollView from "@/shared/components/CustomScrollView";
@@ -106,7 +111,6 @@ export default function LyricsScreen() {
   const [isSynced, setIsSynced] = useState(true);
   const isSyncedRef = useRef(true);
 
-  // Playback interpolation state
   const lastProgressRef = useRef(0);
   const lastPollTimeRef = useRef(Date.now());
   const isPlayingRef = useRef(false);
@@ -189,7 +193,7 @@ export default function LyricsScreen() {
           }
         }
       } catch {
-        // fail silently
+        // noop
       } finally {
         setFetchDone(true);
       }
@@ -230,7 +234,6 @@ export default function LyricsScreen() {
     useCallback(() => {
       isFocusedRef.current = true;
 
-      // Animation frame loop — interpolates progress every ~16ms
       const animate = () => {
         if (!isFocusedRef.current) {
           return;
@@ -253,7 +256,6 @@ export default function LyricsScreen() {
 
       animFrameRef.current = requestAnimationFrame(animate);
 
-      // Poll Spotify every 2s for accurate progress + track info
       const tick = async () => {
         if (!isFocusedRef.current) {
           return;
@@ -347,27 +349,28 @@ export default function LyricsScreen() {
       return (
         <CustomScrollView
           contentContainerStyle={styles.listContentContainer}
-          data={syncedLines as unknown[]}
+          data={syncedLines}
           keyExtractor={(_, index) => index.toString()}
           onScrollBeginDrag={handleScrollBeginDrag}
           onScrollToIndexFailed={onScrollToIndexFailed}
           ref={flatListRef}
-          renderItem={({ item, index }: { item: unknown; index: number }) => {
-            const lyric = item as LyricLine;
-            const isActive = index === activeIndex;
-            return (
-              <StyledText
-                style={[
-                  styles.lyricText,
-                  {
-                    opacity: isActive ? 1 : 0.4,
-                  },
-                ]}
-              >
-                {lyric.text || " "}
-              </StyledText>
-            );
-          }}
+          renderItem={
+            (({ item, index }: { item: LyricLine; index: number }) => {
+              const isActive = index === activeIndex;
+              return (
+                <StyledText
+                  style={[
+                    styles.lyricText,
+                    {
+                      opacity: isActive ? 1 : 0.4,
+                    },
+                  ]}
+                >
+                  {item.text || " "}
+                </StyledText>
+              );
+            }) as FlatListProps<LyricLine>["renderItem"]
+          }
         />
       );
     }
@@ -376,13 +379,13 @@ export default function LyricsScreen() {
       return (
         <CustomScrollView
           contentContainerStyle={styles.listContentContainer}
-          data={plainLines as unknown[]}
+          data={plainLines}
           keyExtractor={(_, index) => index.toString()}
-          renderItem={({ item }: { item: unknown }) => (
-            <StyledText style={styles.lyricText}>
-              {(item as string) || " "}
-            </StyledText>
-          )}
+          renderItem={
+            (({ item }: { item: string }) => (
+              <StyledText style={styles.lyricText}>{item || " "}</StyledText>
+            )) as FlatListProps<string>["renderItem"]
+          }
         />
       );
     }
