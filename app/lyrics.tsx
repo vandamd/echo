@@ -1,6 +1,7 @@
 import { useFocusEffect } from "expo-router";
-import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  Animated,
   type FlatList,
   type FlatListProps,
   StyleSheet,
@@ -101,7 +102,6 @@ export default function LyricsScreen() {
   const [lyricsData, setLyricsData] = useState<LrcLibResponse | null>(null);
   const [syncedLines, setSyncedLines] = useState<LyricLine[]>([]);
   const [plainLines, setPlainLines] = useState<string[]>([]);
-  const [activeIndex, setActiveIndex] = useState<number>(-1);
   const [fetchDone, setFetchDone] = useState(false);
 
   const isFocusedRef = useRef(true);
@@ -110,6 +110,7 @@ export default function LyricsScreen() {
   const animFrameRef = useRef<number | null>(null);
   const [isSynced, setIsSynced] = useState(true);
   const isSyncedRef = useRef(true);
+  const animatedOpacitiesRef = useRef<Animated.Value[]>([]);
 
   const lastProgressRef = useRef(0);
   const lastPollTimeRef = useRef(Date.now());
@@ -118,8 +119,16 @@ export default function LyricsScreen() {
   const activeIndexRef = useRef(-1);
 
   syncedLinesRef.current = syncedLines;
-  activeIndexRef.current = activeIndex;
   isSyncedRef.current = isSynced;
+
+  const updateOpacity = useCallback((index: number) => {
+    const opacities = animatedOpacitiesRef.current;
+    if (index >= 0 && index < opacities.length) {
+      for (let i = 0; i < opacities.length; i++) {
+        opacities[i].setValue(i === index ? 1 : 0.4);
+      }
+    }
+  }, []);
 
   const handleResync = useCallback(() => {
     setIsSynced(true);
@@ -133,10 +142,10 @@ export default function LyricsScreen() {
 
       if (newIdx >= 0) {
         activeIndexRef.current = newIdx;
-        setActiveIndex(newIdx);
+        updateOpacity(newIdx);
       }
     }
-  }, []);
+  }, [updateOpacity]);
 
   const handleScrollBeginDrag = useCallback(() => {
     if (isSyncedRef.current) {
@@ -156,8 +165,8 @@ export default function LyricsScreen() {
       setSyncedLines([]);
       syncedLinesRef.current = [];
       setPlainLines([]);
-      setActiveIndex(-1);
       activeIndexRef.current = -1;
+      animatedOpacitiesRef.current = [];
       setFetchDone(false);
 
       try {
@@ -188,6 +197,9 @@ export default function LyricsScreen() {
             const parsed = parseSyncedLyrics(data.syncedLyrics);
             setSyncedLines(parsed);
             syncedLinesRef.current = parsed;
+            animatedOpacitiesRef.current = parsed.map(
+              () => new Animated.Value(0.4)
+            );
           } else if (data.plainLyrics) {
             setPlainLines(data.plainLyrics.split("\n").filter((l) => l.trim()));
           }
@@ -211,7 +223,7 @@ export default function LyricsScreen() {
         if (isFocusedRef.current && flatListRef.current) {
           flatListRef.current.scrollToIndex({
             index: info.index,
-            animated: true,
+            animated: false,
             viewPosition: 0.5,
           });
         }
@@ -220,15 +232,16 @@ export default function LyricsScreen() {
     []
   );
 
-  useLayoutEffect(() => {
-    if (activeIndex >= 0 && isFocusedRef.current && isSynced) {
+  useEffect(() => {
+    const idx = activeIndexRef.current;
+    if (idx >= 0 && isFocusedRef.current && isSynced) {
       flatListRef.current?.scrollToIndex({
-        index: activeIndex,
-        animated: true,
+        index: idx,
+        animated: false,
         viewPosition: 0.5,
       });
     }
-  }, [activeIndex, isSynced]);
+  }, [isSynced]);
 
   useFocusEffect(
     useCallback(() => {
@@ -247,7 +260,12 @@ export default function LyricsScreen() {
 
           if (newIdx >= 0 && newIdx !== activeIndexRef.current) {
             activeIndexRef.current = newIdx;
-            setActiveIndex(newIdx);
+            flatListRef.current?.scrollToIndex({
+              index: newIdx,
+              animated: false,
+              viewPosition: 0.5,
+            });
+            updateOpacity(newIdx);
           }
         }
 
@@ -315,7 +333,7 @@ export default function LyricsScreen() {
         }
         clearInterval(intervalId);
       };
-    }, [getPlaybackState, fetchLyrics])
+    }, [getPlaybackState, fetchLyrics, updateOpacity])
   );
 
   const renderContent = () => {
@@ -356,18 +374,14 @@ export default function LyricsScreen() {
           ref={flatListRef}
           renderItem={
             (({ item, index }: { item: LyricLine; index: number }) => {
-              const isActive = index === activeIndex;
+              const opacity =
+                animatedOpacitiesRef.current[index] ?? new Animated.Value(0.4);
               return (
-                <StyledText
-                  style={[
-                    styles.lyricText,
-                    {
-                      opacity: isActive ? 1 : 0.4,
-                    },
-                  ]}
-                >
-                  {item.text || " "}
-                </StyledText>
+                <Animated.View style={{ opacity }}>
+                  <StyledText style={styles.lyricText}>
+                    {item.text || " "}
+                  </StyledText>
+                </Animated.View>
               );
             }) as FlatListProps<LyricLine>["renderItem"]
           }
