@@ -1,343 +1,346 @@
-import { useFocusEffect } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useIsFocused } from "@react-navigation/native";
+import { useLocalSearchParams } from "expo-router";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Animated,
-  type FlatList,
-  type FlatListProps,
+  type LayoutChangeEvent,
+  ScrollView,
   StyleSheet,
   View,
 } from "react-native";
-import { usePlayback } from "@/features/playback";
+import {
+  findActiveLyricIndex,
+  getEffectiveProgressMs,
+  type LyricsTrackInfo,
+  useLyrics,
+} from "@/features/lyrics";
+import { useLivePlaybackState, usePlayback } from "@/features/playback";
+import { useSettings } from "@/features/settings";
 import ContentContainer from "@/shared/components/ContentContainer";
-import CustomScrollView from "@/shared/components/CustomScrollView";
 import { StyledText } from "@/shared/components/StyledText";
-import type {
-  SpotifyCurrentlyPlaying,
-  SpotifyTrackSimple,
-} from "@/shared/types/spotify";
-import { getArtistNames, n } from "@/shared/utils";
+import { getArtistNames, logError, n } from "@/shared/utils";
 
-interface LyricLine {
-  timeMs: number;
-  text: string;
+interface LineLayout {
+  height: number;
+  y: number;
 }
 
-const LRC_REGEX = /^\[(\d{2}):(\d{2})\.(\d{2,3})\](.*)$/;
-
-function parseSyncedLyrics(lyrics: string): LyricLine[] {
-  const lines = lyrics.split("\n");
-  const parsed: LyricLine[] = [];
-
-  for (const line of lines) {
-    const match = line.match(LRC_REGEX);
-    if (!match) {
-      continue;
-    }
-
-    const text = match[4].trim();
-    if (!text) {
-      continue;
-    }
-
-    const minutes = Number.parseInt(match[1], 10);
-    const seconds = Number.parseInt(match[2], 10);
-    let msStr = match[3];
-    if (msStr.length === 2) {
-      msStr += "0";
-    }
-    const ms = Number.parseInt(msStr, 10);
-    const timeMs = minutes * 60_000 + seconds * 1000 + ms;
-
-    parsed.push({ timeMs, text });
-  }
-  return parsed;
-}
-
-interface LrcLibResponse {
-  id: number;
-  trackName: string;
-  artistName: string;
-  albumName: string;
-  duration: number;
-  instrumental: boolean;
-  plainLyrics: string | null;
-  syncedLyrics: string | null;
-}
-
-function buildFetchParams(
-  trackName: string,
-  artistName: string,
-  albumName: string | undefined,
-  durationMs: number
-): URLSearchParams {
-  const params = new URLSearchParams();
-  params.append("track_name", trackName);
-  params.append("artist_name", artistName);
-  if (albumName) {
-    params.append("album_name", albumName);
-  }
-  params.append("duration", Math.round(durationMs / 1000).toString());
-  return params;
-}
-
-function findActiveLine(syncedLines: LyricLine[], progressMs: number): number {
-  return syncedLines.findIndex((line, i) => {
-    const nextLine = syncedLines[i + 1];
-    return (
-      line.timeMs <= progressMs && (!nextLine || nextLine.timeMs > progressMs)
-    );
-  });
+interface PendingSeek {
+  isPlaying: boolean;
+  progressMs: number;
+  startedAt: number;
+  trackKey: string;
 }
 
 export default function LyricsScreen() {
-  const { getPlaybackState } = usePlayback();
+  const isFocused = useIsFocused();
+  const { seekToPosition } = usePlayback();
+  const { triggerHaptic } = useSettings();
+  const { snapshot, hasResolvedInitialState } = useLivePlaybackState();
+  const params = useLocalSearchParams<{
+    trackName?: string;
+    artistName?: string;
+    albumName?: string;
+    durationMs?: string;
+  }>();
 
-  const [trackInfo, setTrackInfo] = useState<{
-    name: string;
-    artistName: string;
-    albumName: string | undefined;
-    durationMs: number;
-  } | null>(null);
+  const routeTrack = useMemo<LyricsTrackInfo | null>(() => {
+    if (!(params.trackName && params.durationMs)) {
+      return null;
+    }
 
-  const [lyricsData, setLyricsData] = useState<LrcLibResponse | null>(null);
-  const [syncedLines, setSyncedLines] = useState<LyricLine[]>([]);
-  const [plainLines, setPlainLines] = useState<string[]>([]);
-  const [fetchDone, setFetchDone] = useState(false);
+    const durationMs = Number.parseInt(params.durationMs, 10);
+    if (Number.isNaN(durationMs)) {
+      return null;
+    }
 
-  const isFocusedRef = useRef(true);
-  const flatListRef = useRef<FlatList>(null);
-  const fetchedTrackKeyRef = useRef<string | null>(null);
-  const animFrameRef = useRef<number | null>(null);
-  const [isSynced, setIsSynced] = useState(true);
-  const isSyncedRef = useRef(true);
-  const animatedOpacitiesRef = useRef<Animated.Value[]>([]);
+    return {
+      name: params.trackName,
+      artistName: params.artistName ?? "",
+      albumName: params.albumName,
+      durationMs,
+    };
+  }, [
+    params.albumName,
+    params.artistName,
+    params.durationMs,
+    params.trackName,
+  ]);
 
-  const lastProgressRef = useRef(0);
-  const lastPollTimeRef = useRef(Date.now());
-  const isPlayingRef = useRef(false);
-  const syncedLinesRef = useRef<LyricLine[]>([]);
+  const liveTrack = useMemo<LyricsTrackInfo | null>(() => {
+    const track = snapshot?.track;
+    if (
+      !track ||
+      snapshot.currentlyPlayingType !== "track" ||
+      track.type === "episode"
+    ) {
+      return null;
+    }
+
+    return {
+      name: track.name,
+      artistName: getArtistNames(track.artists),
+      albumName: track.album?.name,
+      durationMs: track.duration_ms ?? 0,
+    };
+  }, [snapshot]);
+
+  const track = liveTrack ?? (hasResolvedInitialState ? null : routeTrack);
+  const { data, isLoading, isResolved, trackKey } = useLyrics(track);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const [isFollowing, setIsFollowing] = useState(true);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const lineLayoutsRef = useRef<Record<number, LineLayout>>({});
   const activeIndexRef = useRef(-1);
+  const isFollowingRef = useRef(true);
+  const pendingScrollIndexRef = useRef<number | null>(null);
+  const pendingSeekRef = useRef<PendingSeek | null>(null);
+  const contentHeightRef = useRef(0);
+  const containerHeightRef = useRef(0);
 
-  syncedLinesRef.current = syncedLines;
-  isSyncedRef.current = isSynced;
+  const syncedLines = data?.syncedLines ?? [];
+  const plainLines = data?.plainLines ?? [];
+  const lyricsResponse = data?.response ?? null;
+  const showResyncButton = syncedLines.length > 0 && !isFollowing;
+  const plainLineEntries = useMemo(() => {
+    const counts = new Map<string, number>();
 
-  const updateOpacity = useCallback((index: number) => {
-    const opacities = animatedOpacitiesRef.current;
-    if (index >= 0 && index < opacities.length) {
-      for (let i = 0; i < opacities.length; i++) {
-        opacities[i].setValue(i === index ? 1 : 0.4);
+    return plainLines.map((line) => {
+      const occurrence = counts.get(line) ?? 0;
+      counts.set(line, occurrence + 1);
+
+      return {
+        key: `${line}-${occurrence}`,
+        text: line,
+      };
+    });
+  }, [plainLines]);
+
+  useEffect(() => {
+    isFollowingRef.current = isFollowing;
+  }, [isFollowing]);
+
+  useEffect(() => {
+    lineLayoutsRef.current = {};
+    pendingScrollIndexRef.current = null;
+    pendingSeekRef.current = null;
+    activeIndexRef.current = -1;
+    setActiveIndex(-1);
+    isFollowingRef.current = true;
+    setIsFollowing(true);
+    scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+    if (!trackKey) {
+      return;
+    }
+  }, [trackKey]);
+
+  const scrollToLine = useCallback((index: number) => {
+    const lineLayout = lineLayoutsRef.current[index];
+    if (
+      !lineLayout ||
+      containerHeightRef.current <= 0 ||
+      contentHeightRef.current <= 0
+    ) {
+      pendingScrollIndexRef.current = index;
+      return false;
+    }
+
+    const maxOffset = Math.max(
+      contentHeightRef.current - containerHeightRef.current,
+      0
+    );
+    const targetOffset = Math.min(
+      Math.max(
+        lineLayout.y + lineLayout.height / 2 - containerHeightRef.current / 2,
+        0
+      ),
+      maxOffset
+    );
+
+    pendingScrollIndexRef.current = null;
+    scrollViewRef.current?.scrollTo({ y: targetOffset, animated: false });
+    return true;
+  }, []);
+
+  const syncToIndex = useCallback(
+    (nextIndex: number, shouldFollow: boolean) => {
+      if (nextIndex < 0) {
+        if (activeIndexRef.current !== -1) {
+          activeIndexRef.current = -1;
+          setActiveIndex(-1);
+        }
+        return;
       }
+
+      if (activeIndexRef.current !== nextIndex) {
+        activeIndexRef.current = nextIndex;
+        setActiveIndex(nextIndex);
+      }
+
+      if (shouldFollow) {
+        scrollToLine(nextIndex);
+      }
+    },
+    [scrollToLine]
+  );
+
+  const syncToProgress = useCallback(
+    (progressMs: number | null, shouldFollow = isFollowingRef.current) => {
+      if (progressMs === null || syncedLines.length === 0) {
+        syncToIndex(-1, shouldFollow);
+        return;
+      }
+
+      syncToIndex(findActiveLyricIndex(syncedLines, progressMs), shouldFollow);
+    },
+    [syncToIndex, syncedLines]
+  );
+
+  const getDisplayProgressMs = useCallback(() => {
+    const pendingSeek = pendingSeekRef.current;
+    if (!pendingSeek || pendingSeek.trackKey !== trackKey) {
+      return getEffectiveProgressMs(snapshot);
+    }
+
+    const elapsed = Date.now() - pendingSeek.startedAt;
+    if (elapsed > 1500) {
+      pendingSeekRef.current = null;
+      return getEffectiveProgressMs(snapshot);
+    }
+
+    return pendingSeek.progressMs + (pendingSeek.isPlaying ? elapsed : 0);
+  }, [snapshot, trackKey]);
+
+  useEffect(() => {
+    const pendingSeek = pendingSeekRef.current;
+    if (
+      pendingSeek &&
+      snapshot &&
+      pendingSeek.trackKey === trackKey &&
+      snapshot.receivedAt >= pendingSeek.startedAt
+    ) {
+      pendingSeekRef.current = null;
+    }
+  }, [snapshot, trackKey]);
+
+  useEffect(() => {
+    if (!isFocused || syncedLines.length === 0 || !snapshot || !trackKey) {
+      return;
+    }
+
+    let frameId: number | null = null;
+
+    const updateActiveLine = () => {
+      syncToProgress(getDisplayProgressMs());
+
+      if (snapshot.isPlaying) {
+        frameId = requestAnimationFrame(updateActiveLine);
+      }
+    };
+
+    updateActiveLine();
+
+    return () => {
+      if (frameId !== null) {
+        cancelAnimationFrame(frameId);
+      }
+    };
+  }, [
+    getDisplayProgressMs,
+    isFocused,
+    snapshot,
+    syncToProgress,
+    syncedLines.length,
+    trackKey,
+  ]);
+
+  const handleScrollBeginDrag = useCallback(() => {
+    if (isFollowingRef.current) {
+      isFollowingRef.current = false;
+      setIsFollowing(false);
     }
   }, []);
 
   const handleResync = useCallback(() => {
-    setIsSynced(true);
-    isSyncedRef.current = true;
+    pendingSeekRef.current = null;
+    isFollowingRef.current = true;
+    setIsFollowing(true);
+    syncToProgress(getEffectiveProgressMs(snapshot), true);
+  }, [snapshot, syncToProgress]);
 
-    const lines = syncedLinesRef.current;
-    if (lines.length > 0 && isPlayingRef.current) {
-      const elapsed = Date.now() - lastPollTimeRef.current;
-      const estimatedProgress = lastProgressRef.current + elapsed;
-      const newIdx = findActiveLine(lines, estimatedProgress);
-
-      if (newIdx >= 0) {
-        activeIndexRef.current = newIdx;
-        updateOpacity(newIdx);
+  const handleLyricPress = useCallback(
+    (index: number, progressMs: number) => {
+      if (!trackKey) {
+        return;
       }
-    }
-  }, [updateOpacity]);
 
-  const handleScrollBeginDrag = useCallback(() => {
-    if (isSyncedRef.current) {
-      setIsSynced(false);
-      isSyncedRef.current = false;
-    }
-  }, []);
+      triggerHaptic();
+      pendingSeekRef.current = {
+        isPlaying: snapshot?.isPlaying ?? false,
+        progressMs,
+        startedAt: Date.now(),
+        trackKey,
+      };
 
-  const fetchLyrics = useCallback(
-    async (
-      trackName: string,
-      artistName: string,
-      albumName: string | undefined,
-      durationMs: number
-    ) => {
-      setLyricsData(null);
-      setSyncedLines([]);
-      syncedLinesRef.current = [];
-      setPlainLines([]);
-      activeIndexRef.current = -1;
-      animatedOpacitiesRef.current = [];
-      setFetchDone(false);
+      isFollowingRef.current = true;
+      setIsFollowing(true);
+      syncToIndex(index, true);
 
-      try {
-        const params = buildFetchParams(
-          trackName,
-          artistName,
-          albumName,
-          durationMs
-        );
-        const headers = { "User-Agent": "Echo (https://github.com)" };
-
-        let res = await fetch(
-          `https://lrclib.net/api/get-cached?${params.toString()}`,
-          { headers }
-        );
-
-        if (!res.ok) {
-          res = await fetch(`https://lrclib.net/api/get?${params.toString()}`, {
-            headers,
-          });
-        }
-
-        if (res.ok) {
-          const data = (await res.json()) as LrcLibResponse;
-          setLyricsData(data);
-
-          if (data.syncedLyrics) {
-            const parsed = parseSyncedLyrics(data.syncedLyrics);
-            setSyncedLines(parsed);
-            syncedLinesRef.current = parsed;
-            animatedOpacitiesRef.current = parsed.map(
-              () => new Animated.Value(0.4)
-            );
-          } else if (data.plainLyrics) {
-            setPlainLines(data.plainLyrics.split("\n").filter((l) => l.trim()));
-          }
-        }
-      } catch {
-        // noop
-      } finally {
-        setFetchDone(true);
-      }
-    },
-    []
-  );
-
-  const onScrollToIndexFailed = useCallback(
-    (info: {
-      index: number;
-      highestMeasuredFrameIndex: number;
-      averageItemLength: number;
-    }) => {
-      setTimeout(() => {
-        if (isFocusedRef.current && flatListRef.current) {
-          flatListRef.current.scrollToIndex({
-            index: info.index,
-            animated: false,
-            viewPosition: 0.5,
-          });
-        }
-      }, 100);
-    },
-    []
-  );
-
-  useEffect(() => {
-    const idx = activeIndexRef.current;
-    if (idx >= 0 && isFocusedRef.current && isSynced) {
-      flatListRef.current?.scrollToIndex({
-        index: idx,
-        animated: false,
-        viewPosition: 0.5,
+      seekToPosition(progressMs).catch((error) => {
+        pendingSeekRef.current = null;
+        syncToProgress(getEffectiveProgressMs(snapshot), true);
+        logError("Lyrics: Failed to seek to lyric line:", error);
       });
-    }
-  }, [isSynced]);
+    },
+    [
+      seekToPosition,
+      snapshot,
+      syncToIndex,
+      syncToProgress,
+      trackKey,
+      triggerHaptic,
+    ]
+  );
 
-  useFocusEffect(
-    useCallback(() => {
-      isFocusedRef.current = true;
+  const handleContainerLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      const nextHeight = event.nativeEvent.layout.height;
+      containerHeightRef.current = nextHeight;
 
-      const animate = () => {
-        if (!isFocusedRef.current) {
-          return;
-        }
+      if (pendingScrollIndexRef.current !== null && isFollowingRef.current) {
+        scrollToLine(pendingScrollIndexRef.current);
+      }
+    },
+    [scrollToLine]
+  );
 
-        const lines = syncedLinesRef.current;
-        if (lines.length > 0 && isPlayingRef.current) {
-          const elapsed = Date.now() - lastPollTimeRef.current;
-          const estimatedProgress = lastProgressRef.current + elapsed;
-          const newIdx = findActiveLine(lines, estimatedProgress);
+  const handleContentSizeChange = useCallback(
+    (_width: number, height: number) => {
+      contentHeightRef.current = height;
 
-          if (newIdx >= 0 && newIdx !== activeIndexRef.current) {
-            activeIndexRef.current = newIdx;
-            flatListRef.current?.scrollToIndex({
-              index: newIdx,
-              animated: false,
-              viewPosition: 0.5,
-            });
-            updateOpacity(newIdx);
-          }
-        }
+      if (pendingScrollIndexRef.current !== null && isFollowingRef.current) {
+        scrollToLine(pendingScrollIndexRef.current);
+      }
+    },
+    [scrollToLine]
+  );
 
-        animFrameRef.current = requestAnimationFrame(animate);
-      };
+  const handleLineLayout = useCallback(
+    (index: number, event: LayoutChangeEvent) => {
+      lineLayoutsRef.current[index] = event.nativeEvent.layout;
 
-      animFrameRef.current = requestAnimationFrame(animate);
-
-      const tick = async () => {
-        if (!isFocusedRef.current) {
-          return;
-        }
-
-        const state =
-          (await getPlaybackState()) as SpotifyCurrentlyPlaying | null;
-        if (!state?.item) {
-          isPlayingRef.current = false;
-          return;
-        }
-
-        const isEpisode =
-          state.currently_playing_type === "episode" ||
-          state.item.type === "episode";
-
-        if (isEpisode) {
-          setTrackInfo(null);
-          fetchedTrackKeyRef.current = null;
-          isPlayingRef.current = false;
-          return;
-        }
-
-        isPlayingRef.current = state.is_playing ?? false;
-
-        const track = state.item as SpotifyTrackSimple;
-        const artistName = getArtistNames(track.artists);
-        const albumName = track.album?.name;
-        const durationMs = track.duration_ms ?? 0;
-        const trackKey = `${track.name}::${artistName}::${durationMs}`;
-
-        setTrackInfo({
-          name: track.name,
-          artistName,
-          albumName,
-          durationMs,
-        });
-
-        if (state.progress_ms !== null && state.progress_ms !== undefined) {
-          lastProgressRef.current = state.progress_ms;
-          lastPollTimeRef.current = Date.now();
-        }
-
-        if (fetchedTrackKeyRef.current !== trackKey) {
-          fetchedTrackKeyRef.current = trackKey;
-          fetchLyrics(track.name, artistName, albumName, durationMs);
-        }
-      };
-
-      tick();
-      const intervalId = setInterval(tick, 2000);
-
-      return () => {
-        isFocusedRef.current = false;
-        if (animFrameRef.current !== null) {
-          cancelAnimationFrame(animFrameRef.current);
-        }
-        clearInterval(intervalId);
-      };
-    }, [getPlaybackState, fetchLyrics, updateOpacity])
+      if (
+        pendingScrollIndexRef.current === index &&
+        isFollowingRef.current &&
+        containerHeightRef.current > 0
+      ) {
+        scrollToLine(index);
+      }
+    },
+    [scrollToLine]
   );
 
   const renderContent = () => {
-    if (!trackInfo) {
+    if (!track) {
       return (
         <View style={styles.centerContainer}>
           <StyledText style={styles.messageText}>No track playing</StyledText>
@@ -345,17 +348,25 @@ export default function LyricsScreen() {
       );
     }
 
-    if (!lyricsData) {
+    if (isLoading && !data) {
+      return (
+        <View style={styles.centerContainer}>
+          <StyledText style={styles.messageText}>Loading lyrics...</StyledText>
+        </View>
+      );
+    }
+
+    if (!lyricsResponse) {
       return (
         <View style={styles.centerContainer}>
           <StyledText style={styles.messageText}>
-            {fetchDone ? "No lyrics found." : "Loading lyrics..."}
+            {isResolved ? "No lyrics found." : "Loading lyrics..."}
           </StyledText>
         </View>
       );
     }
 
-    if (lyricsData.instrumental) {
+    if (lyricsResponse.instrumental) {
       return (
         <View style={styles.centerContainer}>
           <StyledText style={styles.messageText}>Instrumental</StyledText>
@@ -365,42 +376,54 @@ export default function LyricsScreen() {
 
     if (syncedLines.length > 0) {
       return (
-        <CustomScrollView
-          contentContainerStyle={styles.listContentContainer}
-          data={syncedLines}
-          keyExtractor={(_, index) => index.toString()}
-          onScrollBeginDrag={handleScrollBeginDrag}
-          onScrollToIndexFailed={onScrollToIndexFailed}
-          ref={flatListRef}
-          renderItem={
-            (({ item, index }: { item: LyricLine; index: number }) => {
-              const opacity =
-                animatedOpacitiesRef.current[index] ?? new Animated.Value(0.4);
-              return (
-                <Animated.View style={{ opacity }}>
-                  <StyledText style={styles.lyricText}>
-                    {item.text || " "}
-                  </StyledText>
-                </Animated.View>
-              );
-            }) as FlatListProps<LyricLine>["renderItem"]
-          }
-        />
+        <View onLayout={handleContainerLayout} style={styles.scrollContainer}>
+          <ScrollView
+            contentContainerStyle={styles.listContentContainer}
+            onContentSizeChange={handleContentSizeChange}
+            onScrollBeginDrag={handleScrollBeginDrag}
+            overScrollMode="never"
+            ref={scrollViewRef}
+            showsVerticalScrollIndicator={false}
+          >
+            {syncedLines.map((line, index) => (
+              <View
+                key={`${line.timeMs}-${index}`}
+                onLayout={(event) => handleLineLayout(index, event)}
+                style={styles.lineContainer}
+              >
+                <StyledText
+                  onPress={() => handleLyricPress(index, line.timeMs)}
+                  style={[
+                    styles.lyricText,
+                    index === activeIndex
+                      ? styles.activeLyricText
+                      : styles.inactiveLyricText,
+                  ]}
+                >
+                  {line.text || " "}
+                </StyledText>
+              </View>
+            ))}
+          </ScrollView>
+        </View>
       );
     }
 
     if (plainLines.length > 0) {
       return (
-        <CustomScrollView
-          contentContainerStyle={styles.listContentContainer}
-          data={plainLines}
-          keyExtractor={(_, index) => index.toString()}
-          renderItem={
-            (({ item }: { item: string }) => (
-              <StyledText style={styles.lyricText}>{item || " "}</StyledText>
-            )) as FlatListProps<string>["renderItem"]
-          }
-        />
+        <View style={styles.scrollContainer}>
+          <ScrollView
+            contentContainerStyle={styles.listContentContainer}
+            overScrollMode="never"
+            showsVerticalScrollIndicator={false}
+          >
+            {plainLineEntries.map((line) => (
+              <StyledText key={line.key} style={styles.lyricText}>
+                {line.text || " "}
+              </StyledText>
+            ))}
+          </ScrollView>
+        </View>
       );
     }
 
@@ -413,11 +436,11 @@ export default function LyricsScreen() {
 
   return (
     <ContentContainer
-      headerIcon={isSynced ? undefined : "sync"}
-      headerIconPress={handleResync}
-      headerIconShowLength={isSynced ? 0 : 1}
-      headerTitle={trackInfo?.name || "Lyrics"}
-      style={{ paddingHorizontal: n(20), paddingBottom: 0 }}
+      headerIcon={showResyncButton ? "sync-alt" : undefined}
+      headerIconPress={showResyncButton ? handleResync : undefined}
+      headerIconShowLength={showResyncButton ? 1 : 0}
+      headerTitle={track?.name || "Lyrics"}
+      style={styles.content}
     >
       <View style={styles.container}>{renderContent()}</View>
     </ContentContainer>
@@ -425,10 +448,18 @@ export default function LyricsScreen() {
 }
 
 const styles = StyleSheet.create({
+  content: {
+    paddingHorizontal: n(20),
+    paddingBottom: 0,
+  },
   container: {
     flex: 1,
     width: "100%",
     paddingBottom: n(20),
+  },
+  scrollContainer: {
+    flex: 1,
+    width: "100%",
   },
   centerContainer: {
     flex: 1,
@@ -438,10 +469,18 @@ const styles = StyleSheet.create({
   },
   listContentContainer: {
     gap: n(28),
-    paddingRight: n(10),
+  },
+  lineContainer: {
+    width: "100%",
   },
   lyricText: {
     fontSize: n(30),
+  },
+  activeLyricText: {
+    opacity: 1,
+  },
+  inactiveLyricText: {
+    opacity: 0.3,
   },
   messageText: {
     fontSize: n(18),

@@ -945,7 +945,7 @@ export default function PlayingScreen() {
             >
               <MaterialIcons
                 color={invertColors ? "black" : "white"}
-                name="lyrics"
+                name="mic-external-on"
                 size={n(30)}
               />
             </HapticPressable>

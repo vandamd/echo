@@ -446,7 +446,7 @@ export const appendSavedTracksPage = async (
     existingPages[previousFreshPageCount] = savedTracks;
 
     if (nextUrl === null) {
-        existingPages.length = previousFreshPageCount + 1;
+      existingPages.length = previousFreshPageCount + 1;
     }
 
     const metadata = createSavedTracksMetadata(
