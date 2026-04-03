@@ -9,7 +9,8 @@
     "icon": "./assets/images/icon.png",
     "android": {
       "backgroundColor": "#000000",
-      "package": "com.vandam.echo"
+      "package": "com.vandam.echo",
+      "permissions": ["android.permission.WRITE_SECURE_SETTINGS"]
     },
     "plugins": [
       "expo-router",
@@ -23,6 +24,7 @@
         }
       ],
       "./plugins/with-android-config-changes",
+      "./plugins/with-spotify-auth-manifest-placeholders",
       "./plugins/with-android-theme",
       "./plugins/with-daltonizer-toggle"
     ],

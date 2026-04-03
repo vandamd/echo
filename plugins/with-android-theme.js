@@ -136,4 +136,3 @@ module.exports = function withAndroidTheme(config) {
   result = withSplashDrawable(result);
   return result;
 };
-

@@ -96,6 +96,10 @@ android {
         versionName "3.0.3"
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
+        manifestPlaceholders = [
+            redirectSchemeName: "echo",
+            redirectHostName: "callback",
+        ]
     }
     signingConfigs {
         debug {
