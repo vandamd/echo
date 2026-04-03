@@ -4,16 +4,16 @@ const {
   withDangerousMod,
 } = require("@expo/config-plugins");
 const { resolve } = require("node:path");
-const { writeFileSync, mkdirSync, existsSync, unlinkSync } = require("node:fs");
+const { writeFileSync, mkdirSync, existsSync } = require("node:fs");
 
 function withAndroidThemeColors(config) {
-  return withAndroidColors(config, (configWithColors) => {
-    const colors = configWithColors.modResults.resources.color || [];
+  return withAndroidColors(config, (config) => {
+    const colors = config.modResults.resources.color || [];
 
     const setColor = (name, value) => {
-      const existingIndex = colors.findIndex((color) => color.$.name === name);
-      if (existingIndex >= 0) {
-        colors[existingIndex]._ = value;
+      const existing = colors.findIndex((c) => c.$.name === name);
+      if (existing >= 0) {
+        colors[existing]._ = value;
       } else {
         colors.push({ $: { name }, _: value });
       }
@@ -24,28 +24,26 @@ function withAndroidThemeColors(config) {
     setColor("colorPrimaryDark", "#ffffff");
     setColor("activityBackground", "#000000");
 
-    configWithColors.modResults.resources.color = colors;
-    return configWithColors;
+    config.modResults.resources.color = colors;
+    return config;
   });
 }
 
 function withAndroidThemeStyles(config) {
-  return withAndroidStyles(config, (configWithStyles) => {
-    const styles = configWithStyles.modResults.resources.style || [];
+  return withAndroidStyles(config, (config) => {
+    const styles = config.modResults.resources.style || [];
 
-    const appTheme = styles.find((style) => style.$.name === "AppTheme");
+    const appTheme = styles.find((s) => s.$.name === "AppTheme");
     if (appTheme) {
       appTheme.item = appTheme.item || [];
 
       const setItem = (name, value, attrs = {}) => {
-        const existingIndex = appTheme.item.findIndex(
-          (item) => item.$.name === name
-        );
-        const nextItem = { $: { name, ...attrs }, _: value };
-        if (existingIndex >= 0) {
-          appTheme.item[existingIndex] = nextItem;
+        const existing = appTheme.item.findIndex((i) => i.$.name === name);
+        const item = { $: { name, ...attrs }, _: value };
+        if (existing >= 0) {
+          appTheme.item[existing] = item;
         } else {
-          appTheme.item.push(nextItem);
+          appTheme.item.push(item);
         }
       };
 
@@ -57,52 +55,46 @@ function withAndroidThemeStyles(config) {
     }
 
     const splashTheme = styles.find(
-      (style) => style.$.name === "Theme.App.SplashScreen"
+      (s) => s.$.name === "Theme.App.SplashScreen"
     );
     if (splashTheme) {
       splashTheme.item = splashTheme.item || [];
 
-      const splashBackground = splashTheme.item.find(
-        (item) => item.$.name === "windowSplashScreenBackground"
+      const setOrAdd = (name, value) => {
+        const existing = splashTheme.item.find((i) => i.$.name === name);
+        if (existing) {
+          existing._ = value;
+        } else {
+          splashTheme.item.push({ $: { name }, _: value });
+        }
+      };
+
+      setOrAdd(
+        "windowSplashScreenBackground",
+        "@color/splashscreen_background"
       );
-
-      if (splashBackground) {
-        splashBackground._ = "@color/splashscreen_background";
-      } else {
-        splashTheme.item.push({
-          $: { name: "windowSplashScreenBackground" },
-          _: "@color/splashscreen_background",
-        });
-      }
-
-      const splashItemsToRemove = [
+      setOrAdd(
         "windowSplashScreenAnimatedIcon",
-        "android:windowSplashScreenAnimatedIcon",
-        "android:windowSplashScreenBehavior",
-        "windowSplashScreenBehavior",
-      ];
-
-      splashTheme.item = splashTheme.item.filter(
-        (item) => !splashItemsToRemove.includes(item.$.name)
+        "@drawable/transparent_splash_icon"
       );
     }
 
-    if (!configWithStyles.modResults.resources.$) {
-      configWithStyles.modResults.resources.$ = {};
+    if (!config.modResults.resources.$) {
+      config.modResults.resources.$ = {};
     }
-    configWithStyles.modResults.resources.$["xmlns:tools"] =
+    config.modResults.resources.$["xmlns:tools"] =
       "http://schemas.android.com/tools";
 
-    return configWithStyles;
+    return config;
   });
 }
 
 function withSplashDrawable(config) {
   return withDangerousMod(config, [
     "android",
-    (configWithDangerousMod) => {
+    (config) => {
       const drawablePath = resolve(
-        configWithDangerousMod.modRequest.platformProjectRoot,
+        config.modRequest.platformProjectRoot,
         "app/src/main/res/drawable"
       );
 
@@ -110,53 +102,38 @@ function withSplashDrawable(config) {
         mkdirSync(drawablePath, { recursive: true });
       }
 
-      const launcherBackground = `<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+      const launcherBg = `<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
   <item android:drawable="@color/splashscreen_background"/>
+</layer-list>
+`;
+
+      const transparentIcon = `<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+  <item>
+    <shape android:shape="rectangle">
+      <solid android:color="#00000000"/>
+    </shape>
+  </item>
 </layer-list>
 `;
 
       writeFileSync(
         resolve(drawablePath, "ic_launcher_background.xml"),
-        launcherBackground
+        launcherBg
+      );
+      writeFileSync(
+        resolve(drawablePath, "transparent_splash_icon.xml"),
+        transparentIcon
       );
 
-      return configWithDangerousMod;
-    },
-  ]);
-}
-
-function withRemoveSplashIcon(config) {
-  return withDangerousMod(config, [
-    "android",
-    (configWithDangerousMod) => {
-      const densities = ["hdpi", "mdpi", "xhdpi", "xxhdpi", "xxxhdpi"];
-      const resPath = resolve(
-        configWithDangerousMod.modRequest.platformProjectRoot,
-        "app/src/main/res"
-      );
-
-      for (const density of densities) {
-        const splashIconPath = resolve(
-          resPath,
-          `drawable-${density}`,
-          "splashscreen_logo.png"
-        );
-
-        if (existsSync(splashIconPath)) {
-          unlinkSync(splashIconPath);
-        }
-      }
-
-      return configWithDangerousMod;
+      return config;
     },
   ]);
 }
 
 module.exports = function withAndroidTheme(config) {
-  let nextConfig = config;
-  nextConfig = withAndroidThemeColors(nextConfig);
-  nextConfig = withAndroidThemeStyles(nextConfig);
-  nextConfig = withSplashDrawable(nextConfig);
-  nextConfig = withRemoveSplashIcon(nextConfig);
-  return nextConfig;
+  let result = withAndroidThemeColors(config);
+  result = withAndroidThemeStyles(result);
+  result = withSplashDrawable(result);
+  return result;
 };
+
