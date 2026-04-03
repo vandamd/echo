@@ -11,9 +11,4 @@
 -keep class com.swmansion.reanimated.** { *; }
 -keep class com.facebook.react.turbomodule.** { *; }
 
-# Spotify SDK
--keep class com.spotify.** { *; }
--dontwarn com.spotify.**
-
-# Expo modules
--keep class expo.modules.** { *; }
+# Add any project specific keep options here:
