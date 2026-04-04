@@ -87,6 +87,11 @@ export const findActiveLyricIndex = (
     );
   });
 
+export const findNextLyricIndex = (
+  syncedLines: LyricLine[],
+  progressMs: number
+) => syncedLines.findIndex((line) => line.timeMs > progressMs);
+
 export const getEffectiveProgressMs = (
   snapshot: PlaybackSnapshot | null,
   now = Date.now()

@@ -7,6 +7,7 @@ export type {
 } from "./services/lyrics";
 export {
   findActiveLyricIndex,
+  findNextLyricIndex,
   getEffectiveProgressMs,
   getLyricsTrackKey,
 } from "./services/lyrics";

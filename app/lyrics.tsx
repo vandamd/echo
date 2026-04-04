@@ -86,11 +86,9 @@ export default function LyricsScreen() {
 
   const track = liveTrack ?? (hasResolvedInitialState ? null : routeTrack);
   const { data, isLoading, isResolved, trackKey } = useLyrics(track);
-  const [activeIndex, setActiveIndex] = useState(-1);
   const [isFollowing, setIsFollowing] = useState(true);
   const scrollViewRef = useRef<ScrollView>(null);
   const lineLayoutsRef = useRef<Record<number, LineLayout>>({});
-  const activeIndexRef = useRef(-1);
   const isFollowingRef = useRef(true);
   const pendingScrollIndexRef = useRef<number | null>(null);
   const pendingSeekRef = useRef<PendingSeek | null>(null);
@@ -123,8 +121,6 @@ export default function LyricsScreen() {
     lineLayoutsRef.current = {};
     pendingScrollIndexRef.current = null;
     pendingSeekRef.current = null;
-    activeIndexRef.current = -1;
-    setActiveIndex(-1);
     isFollowingRef.current = true;
     setIsFollowing(true);
     scrollViewRef.current?.scrollTo({ y: 0, animated: false });
@@ -164,21 +160,14 @@ export default function LyricsScreen() {
   const syncToIndex = useCallback(
     (nextIndex: number, shouldFollow: boolean) => {
       if (nextIndex < 0) {
-        if (activeIndexRef.current !== -1) {
-          activeIndexRef.current = -1;
-          setActiveIndex(-1);
-        }
         return;
       }
 
-      if (activeIndexRef.current !== nextIndex) {
-        activeIndexRef.current = nextIndex;
-        setActiveIndex(nextIndex);
+      if (!shouldFollow) {
+        return;
       }
 
-      if (shouldFollow) {
-        scrollToLine(nextIndex);
-      }
+      scrollToLine(nextIndex);
     },
     [scrollToLine]
   );
@@ -227,22 +216,23 @@ export default function LyricsScreen() {
       return;
     }
 
-    let frameId: number | null = null;
+    const progressMs = getDisplayProgressMs();
+    syncToProgress(progressMs);
 
-    const updateActiveLine = () => {
-      syncToProgress(getDisplayProgressMs());
+    if (!snapshot.isPlaying) {
+      return;
+    }
 
-      if (snapshot.isPlaying) {
-        frameId = requestAnimationFrame(updateActiveLine);
-      }
+    let rafId: number;
+    const loop = () => {
+      const currentProgressMs = getDisplayProgressMs();
+      syncToProgress(currentProgressMs);
+      rafId = requestAnimationFrame(loop);
     };
-
-    updateActiveLine();
+    rafId = requestAnimationFrame(loop);
 
     return () => {
-      if (frameId !== null) {
-        cancelAnimationFrame(frameId);
-      }
+      cancelAnimationFrame(rafId);
     };
   }, [
     getDisplayProgressMs,
@@ -264,7 +254,8 @@ export default function LyricsScreen() {
     pendingSeekRef.current = null;
     isFollowingRef.current = true;
     setIsFollowing(true);
-    syncToProgress(getEffectiveProgressMs(snapshot), true);
+    const progressMs = getEffectiveProgressMs(snapshot);
+    syncToProgress(progressMs, true);
   }, [snapshot, syncToProgress]);
 
   const handleLyricPress = useCallback(
@@ -393,12 +384,7 @@ export default function LyricsScreen() {
               >
                 <StyledText
                   onPress={() => handleLyricPress(index, line.timeMs)}
-                  style={[
-                    styles.lyricText,
-                    index === activeIndex
-                      ? styles.activeLyricText
-                      : styles.inactiveLyricText,
-                  ]}
+                  style={styles.lyricText}
                 >
                   {line.text || " "}
                 </StyledText>
@@ -475,12 +461,6 @@ const styles = StyleSheet.create({
   },
   lyricText: {
     fontSize: n(30),
-  },
-  activeLyricText: {
-    opacity: 1,
-  },
-  inactiveLyricText: {
-    opacity: 0.3,
   },
   messageText: {
     fontSize: n(18),
